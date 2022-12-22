@@ -5,7 +5,6 @@
 # 3. one bation server will be deployed on which oc and git command are already installed. This
 #
 # you can choose the default IP ranges and the AZs. Please be aware the network will be deployed in Japan as default.
-# test
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Single AZ network with FW"

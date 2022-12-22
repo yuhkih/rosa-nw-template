@@ -23,7 +23,7 @@ Metadata:
 
 Parameters:
   EnvironmentName:
-    Description: An environment name that is prefixed to resource names
+    Description: An environment name that is prefixed to resource names. If you create multiple clusters using this template, you need to change this name to avoid name confliction.
     Type: String
     Default: "rosa-s"
 
@@ -379,11 +379,6 @@ Resources:
           oc version  >> /tmp/ec2-install.log
           sudo yum install -y git
           git version >> /tmp/ec2-install.log
-          sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/CentOS_7/devel:kubic:libcontainers:stable.repo
-          sudo yum install -y yum-plugin-copr
-          sudo yum copr enable lsm5/container-selinux -y
-          sudo yum install -y podman
-          podman version >> /tmp/ec2-install.log
 
   # AWS Network Firewall:
   # Inspection Firewall Rule Groups:
@@ -449,6 +444,7 @@ Resources:
               - "observatorium.api.openshift.comm"
               - ".amazonaws.com"
               - "mirror.openshift.com"
+              - "storage.googleapis.com/openshift-release"
               - "api.openshift.com"
               - "api.pagerduty.com"
               - "events.pagerduty.com"
@@ -485,11 +481,6 @@ Resources:
               - TLS_SNI
             Targets:
               - ".github.io"
-              - ".opensuse.org"
-              - "mirror-jp.firstyear.id.au"
-              - "copr.fedoraproject.org"
-              - "copr.fedorainfracloud.org"
-              - "download.copr.fedorainfracloud.org"
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name

@@ -25,7 +25,7 @@ Metadata:
 
 Parameters:
   EnvironmentName:
-    Description: An environment name that is prefixed to resource names
+    Description: An environment name that is prefixed to resource names  If you create multiple clusters using this template, you need to change this name to avoid name confliction.
     Type: String
     Default: "rosa-m"
 
@@ -620,6 +620,31 @@ Resources:
         - Key: Name
           Value: DomainAllow-RuleGroup
 
+DomainAllowStatefulRuleGroupForApp:
+    Type: "AWS::NetworkFirewall::RuleGroup"
+    Properties:
+      RuleGroupName: !Sub ${EnvironmentName}-DomainAllow-RuleGroup-For-Application
+      Type: STATEFUL
+      Capacity: 100
+      RuleGroup:
+        RuleVariables:
+          IPSets:
+            HOME_NET:
+              Definition:
+                - !Ref VpcCIDR
+        RulesSource:
+          RulesSourceList:
+            TargetTypes:
+              - HTTP_HOST
+              - TLS_SNI
+            Targets:
+              - ".github.io"
+            GeneratedRulesType: "ALLOWLIST"
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-DomainAllow-RuleGroup-For-Application
+
+
   #VPCA Firewall Policy:
   EgressFirewallPolicy:
     DependsOn: [ICMPAlertStatefulRuleGroup, DomainAllowStatefulRuleGroup]
@@ -634,6 +659,7 @@ Resources:
         StatefulRuleGroupReferences:
           - ResourceArn: !Ref DomainAllowStatefulRuleGroup
           - ResourceArn: !Ref ICMPAlertStatefulRuleGroup
+          - ResourceArn: !Ref DomainAllowStatefulRuleGroupForApp
 
       Tags:
         - Key: Name

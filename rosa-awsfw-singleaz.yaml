@@ -2,7 +2,7 @@
 # 1. Three subnets for each AZ. (Thins template is for single AZ)
 #    Privarte subnet - NATGW subent - FW (Public) subnet - Internet Gateway
 # 2. AWS firewall deployed with a policy which allow all the domains listed on the ROSA document as prerequistes for egress.
-# 3. one bation server will be deployed on which oc and git command are already installed. This
+# 3. one bation server will be deployed on which oc and git command are already installed.
 #
 # you can choose the default IP ranges and the AZs. Please be aware the network will be deployed in Japan as default.
 
@@ -23,9 +23,9 @@ Metadata:
 
 Parameters:
   EnvironmentName:
-    Description: An environment name that is prefixed to resource names
+    Description: An environment name that is prefixed to resource names. If you create multiple clusters using this template, you need to change this name to avoid name confliction.
     Type: String
-    Default: "rosa-s"
+    Default: "singleaz"
 
   VpcCIDR:
     Description: Please enter the IP range (CIDR notation) for this VPC
@@ -375,15 +375,9 @@ Resources:
           tar -xzf openshift-client-linux.tar.gz 
           sudo mv ./oc /usr/local/bin
           sudo mv ./kubectl /usr/local/bin
-          rosa version  >> /tmp/ec2-install.log
           oc version  >> /tmp/ec2-install.log
           sudo yum install -y git
           git version >> /tmp/ec2-install.log
-          sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/CentOS_7/devel:kubic:libcontainers:stable.repo
-          sudo yum install -y yum-plugin-copr
-          sudo yum copr enable lsm5/container-selinux -y
-          sudo yum install -y podman
-          podman version >> /tmp/ec2-install.log
 
   # AWS Network Firewall:
   # Inspection Firewall Rule Groups:
@@ -449,6 +443,7 @@ Resources:
               - "observatorium.api.openshift.comm"
               - ".amazonaws.com"
               - "mirror.openshift.com"
+              - "storage.googleapis.com"
               - "api.openshift.com"
               - "api.pagerduty.com"
               - "events.pagerduty.com"
@@ -485,19 +480,20 @@ Resources:
               - TLS_SNI
             Targets:
               - ".github.io"
-              - ".opensuse.org"
-              - "mirror-jp.firstyear.id.au"
-              - "copr.fedoraproject.org"
-              - "copr.fedorainfracloud.org"
-              - "download.copr.fedorainfracloud.org"
+              - "github.com"
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-DomainAllow-RuleGroup-For-Application
 
-  #VPCA Firewall Policy:
+  # VPCA Firewall Policy:
   EgressFirewallPolicy:
-    DependsOn: [ICMPAlertStatefulRuleGroup, DomainAllowStatefulRuleGroup]
+    DependsOn:
+      [
+        ICMPAlertStatefulRuleGroup,
+        DomainAllowStatefulRuleGroup,
+        DomainAllowStatefulRuleGroupForApp,
+      ]
     Type: AWS::NetworkFirewall::FirewallPolicy
     Properties:
       FirewallPolicyName: !Sub ${EnvironmentName}-InspectionFirewall-Policy
@@ -517,7 +513,12 @@ Resources:
 
   #VPCA Firewall:
   VPCAFirewall:
-    DependsOn: [ICMPAlertStatefulRuleGroup, DomainAllowStatefulRuleGroup]
+    DependsOn:
+      [
+        ICMPAlertStatefulRuleGroup,
+        DomainAllowStatefulRuleGroup,
+        DomainAllowStatefulRuleGroupForApp,
+      ]
     Type: AWS::NetworkFirewall::Firewall
     Properties:
       FirewallName: !Sub ${EnvironmentName}-InspectionFirewall

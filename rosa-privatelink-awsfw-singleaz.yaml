@@ -25,7 +25,7 @@ Parameters:
   EnvironmentName:
     Description: An environment name that is prefixed to resource names. If you create multiple clusters using this template, you need to change this name to avoid name confliction.
     Type: String
-    Default: "rosa-s"
+    Default: "singleaz"
 
   VpcCIDR:
     Description: Please enter the IP range (CIDR notation) for this VPC

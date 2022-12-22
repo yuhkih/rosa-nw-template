@@ -606,6 +606,7 @@ Resources:
               - "observatorium.api.openshift.comm"
               - ".amazonaws.com"
               - "mirror.openshift.com"
+              - "storage.googleapis.com/openshift-release"
               - "api.openshift.com"
               - "api.pagerduty.com"
               - "events.pagerduty.com"

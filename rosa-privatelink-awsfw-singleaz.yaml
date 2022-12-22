@@ -375,7 +375,6 @@ Resources:
           tar -xzf openshift-client-linux.tar.gz 
           sudo mv ./oc /usr/local/bin
           sudo mv ./kubectl /usr/local/bin
-          rosa version  >> /tmp/ec2-install.log
           oc version  >> /tmp/ec2-install.log
           sudo yum install -y git
           git version >> /tmp/ec2-install.log
@@ -481,6 +480,7 @@ Resources:
               - TLS_SNI
             Targets:
               - ".github.io"
+              - "github.com"
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name

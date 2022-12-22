@@ -532,7 +532,7 @@ Resources:
           #!/bin/bash -xe
           exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
           sleep 60
-          date > /tmp/image.log
+          date > /tmp/ec2-install.log
           yum update -y
           curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz
           tar -zxf rosa-linux.tar.gz 
@@ -541,7 +541,10 @@ Resources:
           tar -xzf openshift-client-linux.tar.gz 
           sudo mv ./oc /usr/local/bin
           sudo mv ./kubectl /usr/local/bin
-
+          oc version  >> /tmp/ec2-install.log
+          sudo yum install -y git
+          git version >> /tmp/ec2-install.log
+          
   # AWS Network Firewall:
   # Inspection Firewall Rule Groups:
   ICMPAlertStatefulRuleGroup:
@@ -640,6 +643,7 @@ DomainAllowStatefulRuleGroupForApp:
               - TLS_SNI
             Targets:
               - ".github.io"
+              - "github.com"
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name

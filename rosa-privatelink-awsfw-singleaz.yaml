@@ -2,10 +2,9 @@
 # 1. Three subnets for each AZ. (Thins template is for single AZ)
 #    Privarte subnet - NATGW subent - FW (Public) subnet - Internet Gateway
 # 2. AWS firewall deployed with a policy which allow all the domains listed on the ROSA document as prerequistes for egress.
-# 3. one bation server will be deployed on which oc and git command are already installed. This
+# 3. one bation server will be deployed on which oc and git command are already installed.
 #
 # you can choose the default IP ranges and the AZs. Please be aware the network will be deployed in Japan as default.
-# test
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Single AZ network with FW"

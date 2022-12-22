@@ -443,7 +443,7 @@ Resources:
               - "observatorium.api.openshift.comm"
               - ".amazonaws.com"
               - "mirror.openshift.com"
-              - "storage.googleapis.com/openshift-release"
+              - "storage.googleapis.com"
               - "api.openshift.com"
               - "api.pagerduty.com"
               - "events.pagerduty.com"
@@ -486,9 +486,14 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-DomainAllow-RuleGroup-For-Application
 
-  #VPCA Firewall Policy:
+  # VPCA Firewall Policy:
   EgressFirewallPolicy:
-    DependsOn: [ICMPAlertStatefulRuleGroup, DomainAllowStatefulRuleGroup]
+    DependsOn:
+      [
+        ICMPAlertStatefulRuleGroup,
+        DomainAllowStatefulRuleGroup,
+        DomainAllowStatefulRuleGroupForApp,
+      ]
     Type: AWS::NetworkFirewall::FirewallPolicy
     Properties:
       FirewallPolicyName: !Sub ${EnvironmentName}-InspectionFirewall-Policy
@@ -508,7 +513,12 @@ Resources:
 
   #VPCA Firewall:
   VPCAFirewall:
-    DependsOn: [ICMPAlertStatefulRuleGroup, DomainAllowStatefulRuleGroup]
+    DependsOn:
+      [
+        ICMPAlertStatefulRuleGroup,
+        DomainAllowStatefulRuleGroup,
+        DomainAllowStatefulRuleGroupForApp,
+      ]
     Type: AWS::NetworkFirewall::Firewall
     Properties:
       FirewallName: !Sub ${EnvironmentName}-InspectionFirewall

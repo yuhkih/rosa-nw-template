@@ -544,7 +544,7 @@ Resources:
           oc version  >> /tmp/ec2-install.log
           sudo yum install -y git
           git version >> /tmp/ec2-install.log
-          
+
   # AWS Network Firewall:
   # Inspection Firewall Rule Groups:
   ICMPAlertStatefulRuleGroup:
@@ -609,7 +609,7 @@ Resources:
               - "observatorium.api.openshift.comm"
               - ".amazonaws.com"
               - "mirror.openshift.com"
-              - "storage.googleapis.com/openshift-release"
+              - "storage.googleapis.com"
               - "api.openshift.com"
               - "api.pagerduty.com"
               - "events.pagerduty.com"
@@ -622,9 +622,9 @@ Resources:
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name
-          Value: DomainAllow-RuleGroup
+          Value: !Sub ${EnvironmentName}-DomainAllow-RuleGroup
 
-DomainAllowStatefulRuleGroupForApp:
+  DomainAllowStatefulRuleGroupForApp:
     Type: "AWS::NetworkFirewall::RuleGroup"
     Properties:
       RuleGroupName: !Sub ${EnvironmentName}-DomainAllow-RuleGroup-For-Application
@@ -649,10 +649,14 @@ DomainAllowStatefulRuleGroupForApp:
         - Key: Name
           Value: !Sub ${EnvironmentName}-DomainAllow-RuleGroup-For-Application
 
-
   #VPCA Firewall Policy:
   EgressFirewallPolicy:
-    DependsOn: [ICMPAlertStatefulRuleGroup, DomainAllowStatefulRuleGroup]
+    DependsOn:
+      [
+        ICMPAlertStatefulRuleGroup,
+        DomainAllowStatefulRuleGroup,
+        DomainAllowStatefulRuleGroupForApp,
+      ]
     Type: AWS::NetworkFirewall::FirewallPolicy
     Properties:
       FirewallPolicyName: !Sub ${EnvironmentName}-InspectionFirewall-Policy
@@ -665,14 +669,18 @@ DomainAllowStatefulRuleGroupForApp:
           - ResourceArn: !Ref DomainAllowStatefulRuleGroup
           - ResourceArn: !Ref ICMPAlertStatefulRuleGroup
           - ResourceArn: !Ref DomainAllowStatefulRuleGroupForApp
-
       Tags:
         - Key: Name
           Value: InspectionFirewall-Policy
 
   #VPCA Firewall:
   VPCAFirewall:
-    DependsOn: [ICMPAlertStatefulRuleGroup, DomainAllowStatefulRuleGroup]
+    DependsOn:
+      [
+        ICMPAlertStatefulRuleGroup,
+        DomainAllowStatefulRuleGroup,
+        DomainAllowStatefulRuleGroupForApp,
+      ]
     Type: AWS::NetworkFirewall::Firewall
     Properties:
       FirewallName: !Sub ${EnvironmentName}-InspectionFirewall

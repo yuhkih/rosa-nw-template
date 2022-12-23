@@ -25,9 +25,9 @@ Metadata:
 
 Parameters:
   EnvironmentName:
-    Description: An environment name that is prefixed to resource names
+    Description: An environment name that is prefixed to resource names  If you create multiple clusters using this template, you need to change this name to avoid name confliction.
     Type: String
-    Default: "rosa-m"
+    Default: "multiaz"
 
   VpcCIDR:
     Description: Please enter the IP range (CIDR notation) for this VPC
@@ -532,7 +532,7 @@ Resources:
           #!/bin/bash -xe
           exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
           sleep 60
-          date > /tmp/image.log
+          date > /tmp/ec2-install.log
           yum update -y
           curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz
           tar -zxf rosa-linux.tar.gz 
@@ -541,6 +541,9 @@ Resources:
           tar -xzf openshift-client-linux.tar.gz 
           sudo mv ./oc /usr/local/bin
           sudo mv ./kubectl /usr/local/bin
+          oc version  >> /tmp/ec2-install.log
+          sudo yum install -y git
+          git version >> /tmp/ec2-install.log
 
   # AWS Network Firewall:
   # Inspection Firewall Rule Groups:
@@ -606,6 +609,7 @@ Resources:
               - "observatorium.api.openshift.comm"
               - ".amazonaws.com"
               - "mirror.openshift.com"
+              - "storage.googleapis.com"
               - "api.openshift.com"
               - "api.pagerduty.com"
               - "events.pagerduty.com"
@@ -618,11 +622,41 @@ Resources:
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name
-          Value: DomainAllow-RuleGroup
+          Value: !Sub ${EnvironmentName}-DomainAllow-RuleGroup
+
+  DomainAllowStatefulRuleGroupForApp:
+    Type: "AWS::NetworkFirewall::RuleGroup"
+    Properties:
+      RuleGroupName: !Sub ${EnvironmentName}-DomainAllow-RuleGroup-For-Application
+      Type: STATEFUL
+      Capacity: 100
+      RuleGroup:
+        RuleVariables:
+          IPSets:
+            HOME_NET:
+              Definition:
+                - !Ref VpcCIDR
+        RulesSource:
+          RulesSourceList:
+            TargetTypes:
+              - HTTP_HOST
+              - TLS_SNI
+            Targets:
+              - ".github.io"
+              - "github.com"
+            GeneratedRulesType: "ALLOWLIST"
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-DomainAllow-RuleGroup-For-Application
 
   #VPCA Firewall Policy:
   EgressFirewallPolicy:
-    DependsOn: [ICMPAlertStatefulRuleGroup, DomainAllowStatefulRuleGroup]
+    DependsOn:
+      [
+        ICMPAlertStatefulRuleGroup,
+        DomainAllowStatefulRuleGroup,
+        DomainAllowStatefulRuleGroupForApp,
+      ]
     Type: AWS::NetworkFirewall::FirewallPolicy
     Properties:
       FirewallPolicyName: !Sub ${EnvironmentName}-InspectionFirewall-Policy
@@ -634,14 +668,19 @@ Resources:
         StatefulRuleGroupReferences:
           - ResourceArn: !Ref DomainAllowStatefulRuleGroup
           - ResourceArn: !Ref ICMPAlertStatefulRuleGroup
-
+          - ResourceArn: !Ref DomainAllowStatefulRuleGroupForApp
       Tags:
         - Key: Name
           Value: InspectionFirewall-Policy
 
   #VPCA Firewall:
   VPCAFirewall:
-    DependsOn: [ICMPAlertStatefulRuleGroup, DomainAllowStatefulRuleGroup]
+    DependsOn:
+      [
+        ICMPAlertStatefulRuleGroup,
+        DomainAllowStatefulRuleGroup,
+        DomainAllowStatefulRuleGroupForApp,
+      ]
     Type: AWS::NetworkFirewall::Firewall
     Properties:
       FirewallName: !Sub ${EnvironmentName}-InspectionFirewall

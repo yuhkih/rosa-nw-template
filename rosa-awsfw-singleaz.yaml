@@ -458,6 +458,40 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-DomainAllow-RuleGroup
 
+  # Added For splunk
+  # Inspection Firewall Rule Groups:
+  SplunkAllowStatefulRuleGroup:
+    Type: AWS::NetworkFirewall::RuleGroup
+    Properties:
+      RuleGroupName: !Sub ${EnvironmentName}-SplunkAllow-RuleGroup
+      Type: STATEFUL
+      Capacity: 100
+      RuleGroup:
+        RuleVariables:
+          IPSets:
+            SPLUNK_NET:
+              Definition:
+                - "18.208.28.131"
+                - "3.228.178.155"
+                - "34.234.20.22"
+                - "54.173.54.28"
+                - "3.221.13.106"
+        RulesSource:
+          StatefulRules:
+            - Action: PASS
+              Header:
+                Direction: FORWARD
+                Protocol: TCP
+                Destination: ANY
+                Source: ANY
+                DestinationPort: 9997
+                SourcePort: ANY
+              RuleOptions:
+                - Keyword: "sid:2"
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-Allow-RuleGroup
+
   #  FW prerequistes for additional components
   #  Github.io
 
@@ -493,6 +527,7 @@ Resources:
         ICMPAlertStatefulRuleGroup,
         DomainAllowStatefulRuleGroup,
         DomainAllowStatefulRuleGroupForApp,
+        SplunkAllowStatefulRuleGroup,
       ]
     Type: AWS::NetworkFirewall::FirewallPolicy
     Properties:
@@ -506,7 +541,7 @@ Resources:
           - ResourceArn: !Ref DomainAllowStatefulRuleGroup
           - ResourceArn: !Ref DomainAllowStatefulRuleGroupForApp
           - ResourceArn: !Ref ICMPAlertStatefulRuleGroup
-
+          - ResourceArn: !Ref SplunkAllowStatefulRuleGroup
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-InspectionFirewall-Policy
@@ -518,6 +553,7 @@ Resources:
         ICMPAlertStatefulRuleGroup,
         DomainAllowStatefulRuleGroup,
         DomainAllowStatefulRuleGroupForApp,
+        SplunkAllowStatefulRuleGroup,
       ]
     Type: AWS::NetworkFirewall::Firewall
     Properties:

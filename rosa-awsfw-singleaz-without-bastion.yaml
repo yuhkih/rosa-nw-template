@@ -159,82 +159,6 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-Firewall-Subnet1
 
-  # AWS PrivateLink interface endpoint for services:
-  VPCAEndpointSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Allow instances to get to SSM Systems Manager
-      VpcId: !Ref VPCA
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: !Ref VpcCIDR
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-VpcEnpoint-Sg1
-
-  VPCASSMEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      PrivateDnsEnabled: true
-      SecurityGroupIds:
-        - !Ref VPCAEndpointSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
-      SubnetIds:
-        - !Ref NatgwSubnet1
-      VpcEndpointType: Interface
-      VpcId: !Ref VPCA
-
-  VPCAEC2MessagesEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      PrivateDnsEnabled: true
-      SecurityGroupIds:
-        - !Ref VPCAEndpointSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
-      SubnetIds:
-        - !Ref NatgwSubnet1
-      VpcEndpointType: Interface
-      VpcId: !Ref VPCA
-
-  VPCASSMMessagesEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      PrivateDnsEnabled: true
-      SecurityGroupIds:
-        - !Ref VPCAEndpointSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
-      SubnetIds:
-        - !Ref NatgwSubnet1
-      VpcEndpointType: Interface
-      VpcId: !Ref VPCA
-
-  # SSM Role:
-  SubnetRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub "${EnvironmentName}-SSMRole-${AWS::Region}"
-      Path: "/"
-      ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - ec2.amazonaws.com
-            Action:
-              - sts:AssumeRole
-
-  SubnetInstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Path: "/"
-      Roles:
-        - !Ref SubnetRole
-
   # Fn::GetAtt for Firewall do not return VPCE Id in ordered format.
   # For more details refer to: https://github.com/aws-cloudformation/aws-cloudformation-resource-providers-networkfirewall/issues/15
   # Until the bug is fixed we have to rely on custom resource to retrieve AZ specific VPCE Id.
@@ -648,14 +572,19 @@ Outputs:
   RosaPrivateSubnetID:
     Value: !Ref PrivateSubnet1
     Export:
-      Name: subnet-id-rosa
+      Name: private-subnet-id-rosa
+
+  RosaNatGwSubnetID:
+    Value: !Ref NatgwSubnet1
+    Export:
+      Name: natgw-subnet-id-rosa
 
   RosaPrivateRouteTableID:
     Value: !Ref PrivateRtb1
     Export:
       Name: private-rtb-id-rosa
 
-  RosaPublicRouteTableID:
-    Value: !Ref PublicRtb1
+  RosaNatGwRouteTableID:
+    Value: !Ref NatgwRtb1
     Export:
-      Name: public-rtb-id-rosa
+      Name: natgw-rtb-id-rosa

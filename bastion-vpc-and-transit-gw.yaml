@@ -13,7 +13,7 @@ Metadata:
           - LatestAmiId
 
 # -------------------------------------------
-# Parameters 
+# Parameters
 Parameters:
   EnvironmentName:
     Description: An environment name that is prefixed to resource names
@@ -44,13 +44,13 @@ Parameters:
     Default: "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
 
 # ------------------------------------------------------
-# 作成するリソース
+# Resources
 
 Resources:
   VPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: !Ref VpcCIDR 
+      CidrBlock: !Ref VpcCIDR
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
@@ -289,7 +289,7 @@ Resources:
     Type: AWS::EC2::TransitGatewayAttachment
     Properties:
       SubnetIds:
-        - { "Fn::ImportValue": "subnet-id-rosa" }
+        - { "Fn::ImportValue": "private-subnet-id-rosa" }
       TransitGatewayId: !Ref TGW
       VpcId: { "Fn::ImportValue": "vpc-id-rosa" }
       Tags:
@@ -306,20 +306,20 @@ Resources:
     DependsOn: VpcBastionAttachment
 
   # Edit Public / Private Route table on ROSA VPC (Public Subnet needs a return route to Bastion VPC)
-    VpcRosaTGWRoutePrivate:
+  VpcRosaTGWRoutePrivate:
     Type: "AWS::EC2::Route"
     Properties:
       RouteTableId: { "Fn::ImportValue": "private-rtb-id-rosa" } # Route table ID for Private Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR                         # If destination is Bastion VPC CIDR
-      TransitGatewayId: !Ref TGW                                 # Then route to TGW
+      DestinationCidrBlock: !Ref VpcCIDR # If destination is Bastion VPC CIDR
+      TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
 
   VpcRosaTGWRoutePublic:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "public-rtb-id-rosa" } # Route table ID for Public Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR                        # If destination is ROSA VPC CIDR
-      TransitGatewayId: !Ref TGW                                # Then route to TGW
+      RouteTableId: { "Fn::ImportValue": "natgw-rtb-id-rosa" } # Route table ID for Public Subnet in ROSA VPC
+      DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
+      TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
 
 # ------------------------------------------------------
@@ -339,9 +339,9 @@ Outputs:
     Value: !Join [",", [!Ref PrivateSubnet]]
 
   PublicSubnet:
-    Description: A reference to the public subnet 
+    Description: A reference to the public subnet
     Value: !Ref PublicSubnet
 
   PrivateSubnet:
-    Description: A reference to the private subnet 
+    Description: A reference to the private subnet
     Value: !Ref PrivateSubnet

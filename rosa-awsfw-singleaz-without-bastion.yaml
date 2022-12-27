@@ -59,7 +59,6 @@ Parameters:
     Description: Latest EC2 AMI from Systems Manager Parameter Store
     Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
     Default: "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
-    # Default: " ami-0ea68c5d65d83471b"
 
 #  Zone Memo
 #      Private1           CidrBlock: "10.0.0.0/24"
@@ -331,53 +330,6 @@ Resources:
       ServiceToken: !GetAtt RetrieveVpceId.Arn
       Az1: !Ref AvailabilityZone1Selection
       FwArn: !Ref VPCAFirewall
-
-  # Testing Security Group:
-  SubnetSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: "ICMP access from VPC"
-      GroupName: !Sub ${EnvironmentName}-TestInstance-Sg1
-      VpcId: !Ref VPCA
-      SecurityGroupIngress:
-        - IpProtocol: icmp
-          CidrIp: !Ref VpcCIDR
-          FromPort: -1
-          ToPort: -1
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-TestInstance-Sg1
-
-  # Test Instances
-  BastionInstance1:
-    Type: AWS::EC2::Instance
-    Properties:
-      ImageId: !Ref LatestAmiId
-      SubnetId: !Ref PrivateSubnet1
-      InstanceType: t2.micro
-      SecurityGroupIds:
-        - !Ref SubnetSecurityGroup
-      IamInstanceProfile: !Ref SubnetInstanceProfile
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-BastionInstance1
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash -xe
-          exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-          sleep 60
-          date > /tmp/ec2-install.log
-          yum update -y
-          curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz
-          tar -zxf rosa-linux.tar.gz 
-          sudo mv ./rosa /usr/local/bin/
-          rosa download oc
-          tar -xzf openshift-client-linux.tar.gz 
-          sudo mv ./oc /usr/local/bin
-          sudo mv ./kubectl /usr/local/bin
-          oc version  >> /tmp/ec2-install.log
-          sudo yum install -y git
-          git version >> /tmp/ec2-install.log
 
   # AWS Network Firewall:
   # Inspection Firewall Rule Groups:
@@ -683,6 +635,27 @@ Resources:
       RouteTableId: !Ref IngressRtb
 
 Outputs:
-  PrivateSubnetID1:
-    Description: Private Subnet ID1
+  RosaVpcCIDR:
+    Value: !Ref VpcCIDR
+    Export:
+      Name: vpc-cidr-rosa
+
+  RosaVpcID:
+    Value: !Ref VPCA
+    Export:
+      Name: vpc-id-rosa
+
+  RosaPrivateSubnetID:
     Value: !Ref PrivateSubnet1
+    Export:
+      Name: subnet-id-rosa
+
+  RosaPrivateRouteTableID:
+    Value: !Ref PrivateRtb1
+    Export:
+      Name: private-rtb-id-rosa
+
+  RosaPublicRouteTableID:
+    Value: !Ref PublicRtb1
+    Export:
+      Name: public-rtb-id-rosa

@@ -38,12 +38,16 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Allow instances to get to SSM Systems Manager
-      VpcId: { "Fn::ImportValue": "private-vpc-id-rosa" } # ROSA VPC ID
+      VpcId: { "Fn::ImportValue": "vpc-id-rosa" } # ROSA VPC ID
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
-          CidrIp: { "Fn::ImportValue": "vpc-cidr-rosa" } # ROSA VPC CIDR
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-VpcEnpoint-Sg1
@@ -58,7 +62,7 @@ Resources:
       SubnetIds:
         - { "Fn::ImportValue": "natgw-subnet-id-rosa" }
       VpcEndpointType: Interface
-      VpcId: { "Fn::ImportValue": "private-vpc-id-rosa" } # ROSA VPC ID
+      VpcId: { "Fn::ImportValue": "vpc-id-rosa" } # ROSA VPC ID
 
   VPCAEC2MessagesEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -70,7 +74,7 @@ Resources:
       SubnetIds:
         - { "Fn::ImportValue": "natgw-subnet-id-rosa" }
       VpcEndpointType: Interface
-      VpcId: { "Fn::ImportValue": "private-vpc-id-rosa" } # ROSA VPC ID
+      VpcId: { "Fn::ImportValue": "vpc-id-rosa" } # ROSA VPC ID
 
   VPCASSMMessagesEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -82,7 +86,7 @@ Resources:
       SubnetIds:
         - { "Fn::ImportValue": "natgw-subnet-id-rosa" }
       VpcEndpointType: Interface
-      VpcId: { "Fn::ImportValue": "private-vpc-id-rosa" } # ROSA VPC ID
+      VpcId: { "Fn::ImportValue": "vpc-id-rosa" } # ROSA VPC ID
 
   # SSM Role:
   SubnetRole:
@@ -116,7 +120,7 @@ Resources:
     Properties:
       GroupDescription: "ICMP acess from VPCA"
       GroupName: !Sub ${EnvironmentName}-TestInstance-Sg1
-      VpcId: { "Fn::ImportValue": "private-vpc-id-rosa" } # ROSA VPC ID
+      VpcId: { "Fn::ImportValue": "vpc-id-rosa" } # ROSA VPC ID
       SecurityGroupIngress:
         - IpProtocol: icmp
           CidrIp: { "Fn::ImportValue": "vpc-cidr-rosa" } # ROSA VPC CIDR
@@ -126,12 +130,19 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-TestInstance-Sg1
 
+  # Create SSH Key (SSM Bastion doesn't need SSH because it allows to login in from AWS console. This is addedd just for convenience)
+  NewKeyPair:
+    Type: "AWS::EC2::KeyPair"
+    Properties:
+      KeyName: SSMBastionKeyPair
+
   # SSM Bastion Instances
   BastionInstance1:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref LatestAmiId
-      SubnetId: { "Fn::ImportValue": "natgw-rtb-id-rosa" } # subnet id where the SSM bastion will be created
+      KeyName: !Ref NewKeyPair
+      SubnetId: { "Fn::ImportValue": "natgw-subnet-id-rosa" } # subnet id where the SSM bastion will be created
       InstanceType: t2.micro
       SecurityGroupIds:
         - !Ref SubnetSecurityGroup
@@ -156,3 +167,11 @@ Resources:
           oc version  >> /tmp/ec2-install.log
           sudo yum install -y git
           git version >> /tmp/ec2-install.log
+
+# ------------------------------------------------------
+# Out put
+
+Outputs:
+  BastionKeyPair:
+    Description: Bastion Key Name. You can get this key from Systems Manager parameter
+    Value: !Ref NewKeyPair

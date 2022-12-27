@@ -345,3 +345,7 @@ Outputs:
   PrivateSubnet:
     Description: A reference to the private subnet
     Value: !Ref PrivateSubnet
+
+  BastionKeyPair:
+    Description: Bastion Key Name. You can get this key from Systems Manager parameter
+    Value: !Ref NewKeyPair

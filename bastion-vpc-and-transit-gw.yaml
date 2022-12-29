@@ -223,6 +223,7 @@ Resources:
           oc version  >> /tmp/ec2-install.log
           sudo yum install -y git
           git version >> /tmp/ec2-install.log
+          sudo yum install -y jq
 
   # Bastion2 (Private Subnet)
   BastionInstance2:

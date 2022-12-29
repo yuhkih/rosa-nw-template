@@ -678,6 +678,7 @@ Resources:
             Targets:
               - ".github.io"
               - "github.com"
+              - "api.github.com" # added for GitHub IdP
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name

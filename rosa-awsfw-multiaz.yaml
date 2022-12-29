@@ -678,6 +678,7 @@ Resources:
             Targets:
               - ".github.io"
               - "github.com"
+              - "api.github.com" # added for GitHub IdP
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name
@@ -993,13 +994,44 @@ Resources:
 
 Outputs:
   PrivateSubnetID1:
-    Description: Private Subnet ID1
+    Description: Private Subnet ID1 for ROSA BYOVPC installation
     Value: !Ref PrivateSubnet1
 
   PrivateSubnetID2:
-    Description: Private Subnet ID2
+    Description: Private Subnet ID2 for ROSA BYOVPC installation
     Value: !Ref PrivateSubnet2
 
   PrivateSubnetID3:
-    Description: Private Subnet ID3
+    Description: Private Subnet ID3 for ROSA BYOVPC installation
     Value: !Ref PrivateSubnet3
+
+  # The below export variables will be used when you add bastion VPC and connect it through Transit Gateway.
+  RosaVpcCIDR:
+    Value: !Ref VpcCIDR
+    Export:
+      Name: vpc-cidr-rosa
+
+  RosaVpcID:
+    Value: !Ref VPCA
+    Export:
+      Name: vpc-id-rosa
+
+  RosaPrivateSubnetID:
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: private-subnet-id-rosa
+
+  RosaNatGwSubnetID:
+    Value: !Ref NatgwSubnet1
+    Export:
+      Name: natgw-subnet-id-rosa
+
+  RosaPrivateRouteTableID:
+    Value: !Ref PrivateRtb1
+    Export:
+      Name: private-rtb-id-rosa
+
+  RosaPublicRouteTableID:
+    Value: !Ref NatGwRtb1
+    Export:
+      Name: natgw-rtb-id-rosa

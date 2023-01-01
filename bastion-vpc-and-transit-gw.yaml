@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Create VPC (prublic / private subnet ) which has a bation server in each subnet and Transit Gateway to a specifed VPC"
+Description: "Bastion VPC (prublic / private subnet ) which has a bation server in each subnet and Transit Gateway to a specifed VPC"
 
 Metadata:
   "AWS::CloudFormation::Interface":

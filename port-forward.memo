@@ -6,10 +6,10 @@ $ aws ec2 describe-instances | jq -r '.Reservations[] | [.Instances[].InstanceTy
 # Terminal 1
 export PUBLIC_BASTION=52.197.133.115  # bastion 1 (facing public)
 export PRIVATE_BASTION=10.11.145.199   # bastion 2
-ssh -i BastionKeyPair.pem -p 22 ec2-user@$PUBLIC_BASTION -L 10022:$PRIVATE_BASTION:22
+ssh -i bastion-key.pem -p 22 ec2-user@$PUBLIC_BASTION -L 10022:$PRIVATE_BASTION:22
 
 # Terminal 2
-ssh -i BastionKeyPair.pem -p 10022 ec2-user@localhost -D 10044
+ssh -i bastion-key.pem -p 10022 ec2-user@localhost -D 10044
 
 # Local /etc/hosts
 # console-openshift-console..... = console

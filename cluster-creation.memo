@@ -1,0 +1,41 @@
+# Sbunet Ids 
+MachineCIDR=10.0.0.16
+PrivateSbunetID1=subnet-0079002853fccf526
+PrivateSubnetID2=subnet-029539504f5d7c569
+PrivateSubnetID3=subnet-0882ecf5f9d3facac
+ClusterName=my-cluster
+
+# Deploy VPC with Multi AZ 
+aws cloudformation create-stack \
+--stack-name stack-rosa \
+--template-body file://rosa-awsfw-multiaz.yaml  \
+--capabilities CAPABILITY_NAMED_IAM 
+
+# Deploy VPC with two bations (private / public)
+aws cloudformation create-stack \
+--stack-name stack-rosa \
+--template-body file://bastion-vpc-and-transit-gw.yaml  \
+--capabilities CAPABILITY_NAMED_IAM 
+
+# Create roles for STS
+
+
+# Core Installation
+  rosa create cluster --cluster-name my-cluster --sts --role-arn arn:aws:iam::452752386616:role/ManagedOpenShift-Installer-Role \
+  --support-role-arn arn:aws:iam::452752386616:role/ManagedOpenShift-Support-Role \
+  --controlplane-iam-role arn:aws:iam::452752386616:role/ManagedOpenShift-ControlPlane-Role \
+  --worker-iam-role arn:aws:iam::452752386616:role/ManagedOpenShift-Worker-Role \
+  --operator-roles-prefix my-cluster-k5p9 \
+  --multi-az --region ap-northeast-1 --version 4.11.5 --compute-nodes 3 --compute-machine-type m5.xlarge \
+  --machine-cidr $MachineCIDR --service-cidr 172.30.0.0/16 --pod-cidr 10.128.0.0/14  --host-prefix 23 \
+  --private-link \
+  --subnet-ids $PrivateSbunetID1,PrivateSbunetID2,PrivateSbunetID3
+
+
+# create operator roles and OIDC Provider
+rosa create operator-roles --cluster my-cluster
+rosa create oidc-provider --cluster my-cluster
+
+# create cluster admin after cluster installation completes
+rosa create admin -c my-cluster
+

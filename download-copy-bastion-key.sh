@@ -24,8 +24,7 @@ PublicIP=`aws ec2 describe-instances | jq -r .Reservations[].Instances[].PublicI
 ssh -i ./bastion-key.pem ec2-user@$PublicIP "rm -f  ~/bastion-key.pem"
 scp -i ./bastion-key.pem ./bastion-key.pem ec2-user@$PublicIP:~
 
-# 6. Log in to bastion
-echo "6. Log in to bastion"
-echo "Check if bation-key.pem was copied on this bastion server using ls -l" 
-ssh -i ./bastion-key.pem  ec2-user@$PublicIP
+# echo "6. Log in to bastion"
+# echo "Check if bation-key.pem was copied on this bastion server using ls -l" 
+# ssh -i ./bastion-key.pem  ec2-user@$PublicIP
 

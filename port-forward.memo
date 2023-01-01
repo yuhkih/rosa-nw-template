@@ -1,5 +1,5 @@
 # How to list private and public IPs
-$ aws ec2 describe-instances | jq -r '.Reservations[] | [.Instances[].InstanceType, .Instances[].InstanceId, .Instances[].State.Name, .Instances[].PrivateIpAddress, .Instances[].PublicIpAddress ] | @csv'
+$ aws ec2 describe-instances | jq -r '.Reservations[] | [.Instances[].InstanceType, .Instances[].InstanceId, .Instances[].State.Name, .Instances[].PrivateIpAddress, .Instances[].PublicIpAddress ] | @csv' | grep t2.micro
 "t2.micro","i-08371b3200e9e137e","running","10.11.6.140","52.197.133.115"
 "t2.micro","i-060b26769d6ce6fa2","running","10.11.145.199",
 

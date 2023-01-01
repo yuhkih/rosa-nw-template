@@ -1,13 +1,13 @@
 # The following will be deployed with this CF
-# 1. Three subnets for each AZ.
+# 1. Three subnets for each AZ. (Thins template is for single AZ)
 #    Privarte subnet - NATGW subent - FW (Public) subnet - Internet Gateway
 # 2. AWS firewall deployed with a policy which allow all the domains listed on the ROSA document as prerequistes for egress.
-# 3. one bation server will be deployed on which oc and git command are already installed. This can be access directly from AWS console.
+# 3. one bation server will be deployed on which oc and git command are already installed.
 #
 # you can choose the default IP ranges and the AZs. Please be aware the network will be deployed in Japan as default.
 
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "ROSA sample Multi AZ network with FW"
+Description: "ROSA sample Single AZ network with FW"
 
 Metadata:
   "AWS::CloudFormation::Interface":
@@ -16,8 +16,6 @@ Metadata:
           default: "VPC Parameters"
         Parameters:
           - AvailabilityZone1Selection
-          - AvailabilityZone2Selection
-          - AvailabilityZone3Selection
       - Label:
           default: "EC2 Parameters"
         Parameters:
@@ -25,78 +23,37 @@ Metadata:
 
 Parameters:
   EnvironmentName:
-    Description: An environment name that is prefixed to resource names  If you create multiple clusters using this template, you need to change this name to avoid name confliction.
+    Description: An environment name that is prefixed to resource names. If you create multiple clusters using this template, you need to change this name to avoid name confliction.
     Type: String
-    Default: "multiaz"
+    Default: "singleaz"
 
   VpcCIDR:
     Description: Please enter the IP range (CIDR notation) for this VPC
     Type: String
-    Default: "10.7.0.0/16"
+    Default: "10.0.0.0/16"
 
-  # Network1 Private / NAGTW
+  # Private Network
   Private1CIDR:
     Description: Please enter the IP range (CIDR notation) for Private Netwowrk1
     Type: String
-    Default: "10.7.1.0/24"
+    Default: "10.0.1.0/24"
 
-  Natgw1CIDR:
-    Description: Please enter the IP range (CIDR notation) for NATGW Netwowrk1
+  # NATGW Network
+  NAT1CIDR:
+    Description: Please enter the IP range (CIDR notation) for Public (NAT) Netwowrk1
     Type: String
-    Default: "10.7.0.0/24"
+    Default: "10.0.0.0/24"
 
-  # Network2 Private / NATGW
-  Private2CIDR:
-    Description: Please enter the IP range (CIDR notation) for Private Netwowrk2
-    Type: String
-    Default: "10.7.2.0/24"
-
-  Natgw2CIDR:
-    Description: Please enter the IP range (CIDR notation) for NATGW Netwowrk2
-    Type: String
-    Default: "10.7.3.0/24"
-
-  # Network3 Private / NATGW
-  Private3CIDR:
-    Description: Please enter the IP range (CIDR notation) for Private Netwowrk3
-    Type: String
-    Default: "10.7.4.0/24"
-
-  Natgw3CIDR:
-    Description: Please enter the IP range (CIDR notation) for NATGW Netwowrk3
-    Type: String
-    Default: "10.7.5.0/24"
-
-  # Firewalls for each AZ
+  # Firewall (Public) Network
   FW1CIDR:
-    Description: Please enter the IP range (CIDR notation) for Firewall (Public) Netwowrk1
+    Description: Please enter the IP range (CIDR notation) for Firewall Netwowrk1
     Type: String
-    Default: "10.7.16.0/28"
-
-  FW2CIDR:
-    Description: Please enter the IP range (CIDR notation) for Firewall (Public) Netwowrk2
-    Type: String
-    Default: "10.7.16.16/28"
-
-  FW3CIDR:
-    Description: Please enter the IP range (CIDR notation) for Firewall (Public) Netwowrk3
-    Type: String
-    Default: "10.7.16.32/28"
+    Default: "10.0.16.0/28"
 
   AvailabilityZone1Selection:
     Description: Availability Zone 1
     Type: AWS::EC2::AvailabilityZone::Name
     Default: ap-northeast-1a
-
-  AvailabilityZone2Selection:
-    Description: Availability Zone 2
-    Type: AWS::EC2::AvailabilityZone::Name
-    Default: ap-northeast-1c
-
-  AvailabilityZone3Selection:
-    Description: Availability Zone 3
-    Type: AWS::EC2::AvailabilityZone::Name
-    Default: ap-northeast-1d
 
   LatestAmiId:
     Description: Latest EC2 AMI from Systems Manager Parameter Store
@@ -105,16 +62,16 @@ Parameters:
 
 #  Zone Memo
 #      Private1           CidrBlock: "10.0.0.0/24"
-#      Nat 1              CidrBlock: "10.0.1.0/24"
-#      FW1 (Public)       CidrBlock: "10.0.16.0/28"
+#      NAT 1              CidrBlock: "10.0.1.0/24"
+#      FW (Public) 1      CidrBlock: "10.0.16.0/28"
 
 #      Private 2          CidrBlock: "10.0.2.0/24"
 #      NAT 2              CidrBlock: "10.0.3.0/24"
-#      FW2 (Public)       CidrBlock: "10.0.16.16/28"
+#      FW (Public) 2      CidrBlock: "10.0.16.16/28"
 
 #      Private 3          CidrBlock: "10.0.4.0/24"
 #      NAT 3              CidrBlock: "10.0.5.0/24"
-#      FW3 (Public)       CidrBlock: "10.0.16.32/28"
+#      FW (Public) 3      CidrBlock: "10.0.16.32/28"
 
 Resources:
   # VPC:
@@ -149,16 +106,6 @@ Resources:
     Properties:
       Domain: vpc
 
-  NatGw2Eip:
-    Type: AWS::EC2::EIP
-    Properties:
-      Domain: vpc
-
-  NatGw3Eip:
-    Type: AWS::EC2::EIP
-    Properties:
-      Domain: vpc
-
   NatGw1:
     Type: AWS::EC2::NatGateway
     Properties:
@@ -169,28 +116,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-NATGWA
-
-  NatGw2:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt
-        - NatGw2Eip
-        - AllocationId
-      SubnetId: !Ref NatgwSubnet2
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-NATGWB
-
-  NatGw3:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt
-        - NatGw3Eip
-        - AllocationId
-      SubnetId: !Ref NatgwSubnet3
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-NATGWC
 
   # Private Subnets for Test Instances:
   PrivateSubnet1:
@@ -206,39 +131,13 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-Private-Subnet1
 
-  PrivateSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId:
-        Ref: VPCA
-      CidrBlock: !Ref Private2CIDR
-      AvailabilityZone:
-        Ref: AvailabilityZone2Selection
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-Private-Subnet2
-
-  PrivateSubnet3:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId:
-        Ref: VPCA
-      CidrBlock: !Ref Private3CIDR
-      AvailabilityZone:
-        Ref: AvailabilityZone3Selection
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-Private-Subnet3
-
   # Subnets for NAT GWs:
   NatgwSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
         Ref: VPCA
-      CidrBlock: !Ref Natgw1CIDR
+      CidrBlock: !Ref NAT1CIDR
       AvailabilityZone:
         Ref: AvailabilityZone1Selection
       MapPublicIpOnLaunch: true
@@ -246,33 +145,7 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-Natgw-Subnet1
 
-  NatgwSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId:
-        Ref: VPCA
-      CidrBlock: !Ref Natgw2CIDR
-      AvailabilityZone:
-        Ref: AvailabilityZone2Selection
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-Natgw-Subnet2
-
-  NatgwSubnet3:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId:
-        Ref: VPCA
-      CidrBlock: !Ref Natgw3CIDR
-      AvailabilityZone:
-        Ref: AvailabilityZone3Selection
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-Natgw-Subnet3
-
-  # Firewall Subnets for firewall endpoints:
+  # Firewall (Public) Subnets for firewall endpoints:
   FirewallSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -286,114 +159,6 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-Firewall-Subnet1
 
-  FirewallSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId:
-        Ref: VPCA
-      CidrBlock: !Ref FW2CIDR
-      AvailabilityZone:
-        Ref: AvailabilityZone2Selection
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-Firewall-Subnet2
-
-  FirewallSubnet3:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId:
-        Ref: VPCA
-      CidrBlock: !Ref FW3CIDR
-      AvailabilityZone:
-        Ref: AvailabilityZone3Selection
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-Firewall-Subnet3
-
-  # AWS PrivateLink interface endpoint for services:
-  VPCAEndpointSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Allow instances to get to SSM Systems Manager
-      VpcId: !Ref VPCA
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: !Ref VpcCIDR
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-VpcEnpoint-Sg1
-
-  VPCASSMEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      PrivateDnsEnabled: true
-      SecurityGroupIds:
-        - !Ref VPCAEndpointSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
-      SubnetIds:
-        - !Ref NatgwSubnet1
-        - !Ref NatgwSubnet2
-        - !Ref NatgwSubnet3
-      VpcEndpointType: Interface
-      VpcId: !Ref VPCA
-
-  VPCAEC2MessagesEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      PrivateDnsEnabled: true
-      SecurityGroupIds:
-        - !Ref VPCAEndpointSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
-      SubnetIds:
-        - !Ref NatgwSubnet1
-        - !Ref NatgwSubnet2
-        - !Ref NatgwSubnet3
-      VpcEndpointType: Interface
-      VpcId: !Ref VPCA
-
-  VPCASSMMessagesEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      PrivateDnsEnabled: true
-      SecurityGroupIds:
-        - !Ref VPCAEndpointSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
-      SubnetIds:
-        - !Ref NatgwSubnet1
-        - !Ref NatgwSubnet2
-        - !Ref NatgwSubnet3
-      VpcEndpointType: Interface
-      VpcId: !Ref VPCA
-
-  # SSM Role:
-  SubnetRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub "SSMRole-${EnvironmentName}-${AWS::Region}"
-      Path: "/"
-      ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - ec2.amazonaws.com
-            Action:
-              - sts:AssumeRole
-
-  SubnetInstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Path: "/"
-      Roles:
-        - !Ref SubnetRole
-
   # Fn::GetAtt for Firewall do not return VPCE Id in ordered format.
   # For more details refer to: https://github.com/aws-cloudformation/aws-cloudformation-resource-providers-networkfirewall/issues/15
   # Until the bug is fixed we have to rely on custom resource to retrieve AZ specific VPCE Id.
@@ -402,7 +167,7 @@ Resources:
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "${EnvironmentName}-LambdaRole-${AWS::Region}"
+      RoleName: !Sub "AnfwLambdaRole-${AWS::Region}"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -439,7 +204,7 @@ Resources:
     Type: AWS::Lambda::Function
     DependsOn: RetrieveVpcIdLogGroup
     Properties:
-      FunctionName: !Sub "RetrieveVpceId-${AWS::StackName}"
+      FunctionName: !Sub RetrieveVpceId-${AWS::StackName}
       Handler: "index.handler"
       Role: !GetAtt
         - LambdaExecutionRole
@@ -463,8 +228,6 @@ Resources:
               if event["RequestType"] == "Create":
                   try:
                       Az1 = event["ResourceProperties"]["Az1"]
-                      Az2 = event["ResourceProperties"]["Az2"]
-                      Az3 = event["ResourceProperties"]["Az3"]
                       FwArn = event["ResourceProperties"]["FwArn"]
                   except Exception as e:
                       logger.info('AZ retrieval failure: {}'.format(e))
@@ -475,15 +238,11 @@ Resources:
                   try:
                       NfwResponse=nfw.describe_firewall(FirewallArn=FwArn)
                       VpceId1 = NfwResponse['FirewallStatus']['SyncStates'][Az1]['Attachment']['EndpointId']
-                      VpceId2 = NfwResponse['FirewallStatus']['SyncStates'][Az2]['Attachment']['EndpointId']
-                      VpceId3 = NfwResponse['FirewallStatus']['SyncStates'][Az3]['Attachment']['EndpointId']
 
                   except Exception as e:
                       logger.info('ec2.describe_firewall failure: {}'.format(e))
 
                   responseData['FwVpceId1'] = VpceId1
-                  responseData['FwVpceId2'] = VpceId2
-                  responseData['FwVpceId3'] = VpceId3
                   responseStatus = cfnresponse.SUCCESS
                   cfnresponse.send(event, context, responseStatus, responseData)
       Runtime: python3.7
@@ -494,56 +253,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt RetrieveVpceId.Arn
       Az1: !Ref AvailabilityZone1Selection
-      Az2: !Ref AvailabilityZone2Selection
-      Az3: !Ref AvailabilityZone3Selection
       FwArn: !Ref VPCAFirewall
-
-  # Testing Security Group:
-  SubnetSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: "ICMP acess from VPCA"
-      GroupName: !Sub ${EnvironmentName}-TestInstance-Sg1
-      VpcId: !Ref VPCA
-      SecurityGroupIngress:
-        - IpProtocol: icmp
-          CidrIp: !Ref VpcCIDR
-          FromPort: -1
-          ToPort: -1
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-TestInstance-Sg1
-
-  # Test Instances - userdata used for Lab 4:
-  BastionInstance1:
-    Type: AWS::EC2::Instance
-    Properties:
-      ImageId: !Ref LatestAmiId
-      SubnetId: !Ref PrivateSubnet1
-      InstanceType: t2.micro
-      SecurityGroupIds:
-        - !Ref SubnetSecurityGroup
-      IamInstanceProfile: !Ref SubnetInstanceProfile
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-BastionInstance1
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash -xe
-          exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-          sleep 60
-          date > /tmp/ec2-install.log
-          yum update -y
-          curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz
-          tar -zxf rosa-linux.tar.gz 
-          sudo mv ./rosa /usr/local/bin/
-          rosa download oc
-          tar -xzf openshift-client-linux.tar.gz 
-          sudo mv ./oc /usr/local/bin
-          sudo mv ./kubectl /usr/local/bin
-          oc version  >> /tmp/ec2-install.log
-          sudo yum install -y git
-          git version >> /tmp/ec2-install.log
 
   # AWS Network Firewall:
   # Inspection Firewall Rule Groups:
@@ -568,7 +278,7 @@ Resources:
                 - Keyword: "sid:1"
       Tags:
         - Key: Name
-          Value: IcmpAlert-RuleGroup
+          Value: !Sub ${EnvironmentName}-IcmpAlert-RuleGroup
 
   #  ROSA FW prerequistes
   #  https://access.redhat.com/documentation/en-us/red_hat_openshift_service_on_aws/4/html/prepare_your_environment/rosa-sts-aws-prereqs#osd-aws-privatelink-firewall-prerequisites_rosa-sts-aws-prereqs
@@ -658,6 +368,9 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-Allow-RuleGroup
 
+  #  FW prerequistes for additional components
+  #  Github.io
+
   DomainAllowStatefulRuleGroupForApp:
     Type: "AWS::NetworkFirewall::RuleGroup"
     Properties:
@@ -684,7 +397,7 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-DomainAllow-RuleGroup-For-Application
 
-  #VPCA Firewall Policy:
+  # VPCA Firewall Policy:
   EgressFirewallPolicy:
     DependsOn:
       [
@@ -703,12 +416,12 @@ Resources:
           - "aws:forward_to_sfe"
         StatefulRuleGroupReferences:
           - ResourceArn: !Ref DomainAllowStatefulRuleGroup
-          - ResourceArn: !Ref ICMPAlertStatefulRuleGroup
           - ResourceArn: !Ref DomainAllowStatefulRuleGroupForApp
+          - ResourceArn: !Ref ICMPAlertStatefulRuleGroup
           - ResourceArn: !Ref SplunkAllowStatefulRuleGroup
       Tags:
         - Key: Name
-          Value: InspectionFirewall-Policy
+          Value: !Sub ${EnvironmentName}-InspectionFirewall-Policy
 
   #VPCA Firewall:
   VPCAFirewall:
@@ -726,11 +439,9 @@ Resources:
       VpcId: !Ref VPCA
       SubnetMappings:
         - SubnetId: !Ref FirewallSubnet1
-        - SubnetId: !Ref FirewallSubnet2
-        - SubnetId: !Ref FirewallSubnet3
       Tags:
         - Key: Name
-          Value: InspectionFirewall
+          Value: !Sub ${EnvironmentName}-InspectionFirewall
 
   #VPCA Firewall Logging:
   VPCAFirewallLogFlowGroup:
@@ -780,48 +491,6 @@ Resources:
       NatGatewayId: !Ref NatGw1
       RouteTableId: !Ref PrivateRtb1
 
-  PrivateRtb2:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPCA
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-PrivateRouteTable2
-
-  PrivateRtb2Association:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRtb2
-      SubnetId: !Ref PrivateSubnet2
-
-  PrivateRtb2DefaultRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref NatGw2
-      RouteTableId: !Ref PrivateRtb2
-
-  PrivateRtb3:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPCA
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-PrivateRouteTable3
-
-  PrivateRtb3Association:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRtb3
-      SubnetId: !Ref PrivateSubnet3
-
-  PrivateRtb3DefaultRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref NatGw3
-      RouteTableId: !Ref PrivateRtb3
-
   # NATGW Route Tables:
   NatgwRtb1:
     Type: AWS::EC2::RouteTable
@@ -845,50 +514,6 @@ Resources:
       VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
       RouteTableId: !Ref NatgwRtb1
 
-  NatgwRtb2:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPCA
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-NatgwRouteTable2
-
-  NatgwRtb2Association:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref NatgwRtb2
-      SubnetId: !Ref NatgwSubnet2
-
-  NatgwRtb2DefaultRoute:
-    Type: AWS::EC2::Route
-    DependsOn: VPCAFirewall
-    Properties:
-      DestinationCidrBlock: "0.0.0.0/0"
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId2
-      RouteTableId: !Ref NatgwRtb2
-
-  NatgwRtb3:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPCA
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-NatgwRouteTable3
-
-  NatgwRtb3Association:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref NatgwRtb3
-      SubnetId: !Ref NatgwSubnet3
-
-  NatgwRtb3DefaultRoute:
-    Type: AWS::EC2::Route
-    DependsOn: VPCAFirewall
-    Properties:
-      DestinationCidrBlock: "0.0.0.0/0"
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId3
-      RouteTableId: !Ref NatgwRtb3
-
   # Firewall Route Tables:
   FirewallRtb1:
     Type: AWS::EC2::RouteTable
@@ -911,48 +536,6 @@ Resources:
       GatewayId: !Ref InternetGateway
       RouteTableId: !Ref FirewallRtb1
 
-  FirewallRtb2:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPCA
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-FirewallRouteTable2
-
-  FirewallRtb2Association:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref FirewallRtb2
-      SubnetId: !Ref FirewallSubnet2
-
-  FirewallRtb2DefaultRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway
-      RouteTableId: !Ref FirewallRtb2
-
-  FirewallRtb3:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPCA
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-FirewallRouteTable3
-
-  FirewallRtb3Association:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref FirewallRtb3
-      SubnetId: !Ref FirewallSubnet3
-
-  FirewallRtb3DefaultRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway
-      RouteTableId: !Ref FirewallRtb3
-
   # Ingress Route Table:
   IngressRtb:
     Type: AWS::EC2::RouteTable
@@ -968,44 +551,15 @@ Resources:
       RouteTableId: !Ref IngressRtb
       GatewayId: !Ref InternetGateway
 
-  IngressRtbNatgwSubnet1Route:
+  IngressRtbPublicSubnet1Route:
     Type: AWS::EC2::Route
     DependsOn: VPCAFirewall
     Properties:
-      DestinationCidrBlock: !Ref Natgw1CIDR
+      DestinationCidrBlock: !Ref NAT1CIDR
       VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
       RouteTableId: !Ref IngressRtb
 
-  IngressRtbNatgwSubnet2Route:
-    Type: AWS::EC2::Route
-    DependsOn: VPCAFirewall
-    Properties:
-      DestinationCidrBlock: !Ref Natgw2CIDR
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId2
-      RouteTableId: !Ref IngressRtb
-
-  IngressRtbNatgwSubnet3Route:
-    Type: AWS::EC2::Route
-    DependsOn: VPCAFirewall
-    Properties:
-      DestinationCidrBlock: !Ref Natgw3CIDR
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId3
-      RouteTableId: !Ref IngressRtb
-
 Outputs:
-  PrivateSubnetID1:
-    Description: Private Subnet ID1 for ROSA BYOVPC installation
-    Value: !Ref PrivateSubnet1
-
-  PrivateSubnetID2:
-    Description: Private Subnet ID2 for ROSA BYOVPC installation
-    Value: !Ref PrivateSubnet2
-
-  PrivateSubnetID3:
-    Description: Private Subnet ID3 for ROSA BYOVPC installation
-    Value: !Ref PrivateSubnet3
-
-  # The below export variables will be used when you add bastion VPC and connect it through Transit Gateway.
   RosaVpcCIDR:
     Value: !Ref VpcCIDR
     Export:

@@ -1031,7 +1031,7 @@ Outputs:
     Export:
       Name: private-rtb-id-rosa
 
-  RosaPublicRouteTableID:
-    Value: !Ref NatGwRtb1
+  RosaNatGwRouteTableID:
+    Value: !Ref NatgwRtb1
     Export:
       Name: natgw-rtb-id-rosa

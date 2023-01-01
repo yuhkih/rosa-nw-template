@@ -7,7 +7,7 @@
 # you can choose the default IP ranges and the AZs. Please be aware the network will be deployed in Japan as default.
 
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "ROSA sample Single AZ network with FW"
+Description: "Add SSM bastion to specified VPC"
 
 Metadata:
   "AWS::CloudFormation::Interface":

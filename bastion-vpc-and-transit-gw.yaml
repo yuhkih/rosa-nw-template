@@ -207,6 +207,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-BastionInstance-Public
+        - Key: Subnet
+          Value: Public
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash -xe
@@ -239,6 +241,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-BastionInstance-Private
+        - Key: Subnet
+          Value: Private
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash -xe

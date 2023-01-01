@@ -206,7 +206,7 @@ Resources:
     Properties:
       FunctionName: !Sub RetrieveVpceId-${AWS::StackName}
       Handler: "index.handler"
-      Role: !GetAtt
+      Role: !GetAtt 
         - LambdaExecutionRole
         - Arn
       Code:
@@ -392,6 +392,7 @@ Resources:
               - ".github.io"
               - "github.com"
               - "api.github.com" # added for GitHub IdP
+              - "acme-v02.api.letsencrypt.org" # Added for Let's Encrypt
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name

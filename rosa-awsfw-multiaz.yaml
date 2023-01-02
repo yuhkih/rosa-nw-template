@@ -947,6 +947,9 @@ Resources:
       RouteTableId: !Ref IngressRtb
 
 Outputs:
+  MyStacksRegion:
+    Value: !Ref "AWS::Region"
+
   PrivateSubnetID1:
     Description: Private Subnet ID1 for ROSA BYOVPC installation
     Value: !Ref PrivateSubnet1

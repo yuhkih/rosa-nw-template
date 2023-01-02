@@ -260,6 +260,7 @@ Resources:
           oc version  >> /tmp/ec2-install.log
           sudo yum install -y git
           git version >> /tmp/ec2-install.log
+          sudo yum install -y jq
 
   # ---------------------------------------------------------------------
   #  Transit Gateway

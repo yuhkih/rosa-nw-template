@@ -103,19 +103,6 @@ Parameters:
     Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
     Default: "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
 
-#  Zone Memo
-#      Private1           CidrBlock: "10.0.0.0/24"
-#      Nat 1              CidrBlock: "10.0.1.0/24"
-#      FW1 (Public)       CidrBlock: "10.0.16.0/28"
-
-#      Private 2          CidrBlock: "10.0.2.0/24"
-#      NAT 2              CidrBlock: "10.0.3.0/24"
-#      FW2 (Public)       CidrBlock: "10.0.16.16/28"
-
-#      Private 3          CidrBlock: "10.0.4.0/24"
-#      NAT 3              CidrBlock: "10.0.5.0/24"
-#      FW3 (Public)       CidrBlock: "10.0.16.32/28"
-
 Resources:
   # VPC:
   VPCA:
@@ -633,6 +620,7 @@ Resources:
               - "github.com"
               - "api.github.com" # added for GitHub IdP
               - "acme-v02.api.letsencrypt.org" # Added for Let's Encrypt
+              - "acme-staging-v02.api.letsencrypt.org" # Added for Let's Encrypt
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name

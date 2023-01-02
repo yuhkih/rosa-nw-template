@@ -1,41 +1,97 @@
-# Sbunet Ids 
-MachineCIDR=10.0.0.16
-PrivateSbunetID1=subnet-0079002853fccf526
-PrivateSubnetID2=subnet-029539504f5d7c569
-PrivateSubnetID3=subnet-0882ecf5f9d3facac
-ClusterName=my-cluster
+# ---------------------------
+# Create VPC for ROSA  
+# ---------------------------
+
+# CloudFormation Parameters
+RosaAz1=ap-northeast-1a   # Tokyo
+RosaAz2=ap-northeast-1c   # Tokyo
+RosaAZ3=ap-northeast-1d   # Tokyo
+Rosa-CIDR=10.0.0.0/16       # common variable for both CloudFormation and rosa CLI.
+
+Private1-CIDR="10.0.1.0/24"
+Private2-CIDR="10.0.2.0/24"
+Private3-CIDR="10.0.4.0/24"
+Natgw1-CIDR="10.0.0.0/24"
+Natgw2-CIDR="10.0.3.0/24"
+Natgw3-CIDR="10.0.5.0/24"
+Fw1-CIDR="10.0.16.0/28"
+Fw2-CIDR="10.0.16.16/28"
+Fw3-CIDR="10.0.16.32/28"
+
 
 # Deploy VPC with Multi AZ 
 aws cloudformation create-stack \
 --stack-name stack-rosa \
 --template-body file://rosa-awsfw-multiaz.yaml  \
---capabilities CAPABILITY_NAMED_IAM 
+--parameters ParameterKey=AvailabilityZone1Selection,ParameterValue=$RosaAz1 \
+ParameterKey=AvailabilityZone2Selection,ParameterValue=$RosaAz2 \
+ParameterKey=AvailabilityZone3Selection,ParameterValue=$RosaAz3 \
 
-# Deploy VPC with two bations (private / public)
-aws cloudformation create-stack \
---stack-name stack-rosa \
---template-body file://bastion-vpc-and-transit-gw.yaml  \
---capabilities CAPABILITY_NAMED_IAM 
+ParameterKey=VpcCIDR,ParameterValue=$Rosa-CIDR \
 
-# Create roles for STS
+ParameterKey=Private1CIDR,ParameterValue=$Private1-CIDR \
+ParameterKey=Private2CIDR,ParameterValue=$Private2-CIDR \
+ParameterKey=Private3CIDR,ParameterValue=$Private3-CIDR \
+
+ParameterKey=Natgw1CIDR,ParameterValue=$Natgw1-CIDR \
+ParameterKey=Natgw2CIDR,ParameterValue=$Natgw2-CIDR \
+ParameterKey=Natgw3CIDR,ParameterValue=$Natgw3-CIDR \
+
+ParameterKey=FW1CIDR,ParameterValue=$RosaAz3 \
+ParameterKey=FW2CIDR,ParameterValue=$RosaAz3 \
+ParameterKey=FW3CIDR,ParameterValue=$RosaAz3 \
+
+# ---------------------------
+# Create ROSA cluster 
+# ---------------------------
+
+# rosa CLI parameters
+ClusterName=my-cluster
+
+# Get ROSA VPC subnetIds
+export PrivateSubnetID1=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet1 | awk -F'[,]' '{print $2}'`
+export PrivateSubnetID2=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet2 | awk -F'[,]' '{print $2}'`
+export PrivateSubnetID3=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet3 | awk -F'[,]' '{print $2}'`
 
 
-# Core Installation
-  rosa create cluster --cluster-name my-cluster --sts --role-arn arn:aws:iam::452752386616:role/ManagedOpenShift-Installer-Role \
+# ROSA Installation
+rosa create cluster --cluster-name $ClusterName --sts --role-arn arn:aws:iam::452752386616:role/ManagedOpenShift-Installer-Role \
   --support-role-arn arn:aws:iam::452752386616:role/ManagedOpenShift-Support-Role \
   --controlplane-iam-role arn:aws:iam::452752386616:role/ManagedOpenShift-ControlPlane-Role \
   --worker-iam-role arn:aws:iam::452752386616:role/ManagedOpenShift-Worker-Role \
   --operator-roles-prefix my-cluster-k5p9 \
   --multi-az --region ap-northeast-1 --version 4.11.5 --compute-nodes 3 --compute-machine-type m5.xlarge \
-  --machine-cidr $MachineCIDR --service-cidr 172.30.0.0/16 --pod-cidr 10.128.0.0/14  --host-prefix 23 \
+  --machine-cidr $Rosa-CIDR --service-cidr 172.30.0.0/16 --pod-cidr 10.128.0.0/14  --host-prefix 23 \
   --private-link \
-  --subnet-ids $PrivateSbunetID1,PrivateSbunetID2,PrivateSbunetID3
+  --subnet-ids $PrivateSubnetID1,$PrivateSubnetID2,$PrivateSubnetID3
 
 
 # create operator roles and OIDC Provider
-rosa create operator-roles --cluster my-cluster
-rosa create oidc-provider --cluster my-cluster
+rosa create operator-roles -y --auto --cluster $ClusterName
+rosa create oidc-provider -y --auto --cluster $ClusterName
 
-# create cluster admin after cluster installation completes
-rosa create admin -c my-cluster
+
+# ---------------------------
+# Create bastion VPC  
+# ---------------------------
+
+# CloudFormation Parameters
+Bastion-CIDR="10.11.0.0/16"
+PublicSubnet-CIDR="10.11.0.0/19"
+PrivateSubnet-CIDR="10.11.128.0/19"
+
+# Deploy VPC with two bations (private / public)
+aws cloudformation create-stack \
+--stack-name bastion-vpc \
+--template-body file://bastion-vpc-and-transit-gw.yaml  \
+--parameters ParameterKey=VpcCIDR,ParameterValue=$Bastion-CIDR \
+ParameterKey=PublicSubnetCIDR,ParameterValue=$PublicSubnet-CIDR \
+ParameterKey=PrivateSubnetCIDR,ParameterValue=$PrivateSubnet-CIDR \
+
+
+# ---------------------------
+# Create ROSA admin user
+# ---------------------------
+create cluster admin after cluster installation completes
+rosa create admin -c $ClusterName
 

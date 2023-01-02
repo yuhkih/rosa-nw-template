@@ -60,19 +60,6 @@ Parameters:
     Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
     Default: "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
 
-#  Zone Memo
-#      Private1           CidrBlock: "10.0.0.0/24"
-#      NAT 1              CidrBlock: "10.0.1.0/24"
-#      FW (Public) 1      CidrBlock: "10.0.16.0/28"
-
-#      Private 2          CidrBlock: "10.0.2.0/24"
-#      NAT 2              CidrBlock: "10.0.3.0/24"
-#      FW (Public) 2      CidrBlock: "10.0.16.16/28"
-
-#      Private 3          CidrBlock: "10.0.4.0/24"
-#      NAT 3              CidrBlock: "10.0.5.0/24"
-#      FW (Public) 3      CidrBlock: "10.0.16.32/28"
-
 Resources:
   # VPC:
   VPCA:
@@ -561,6 +548,9 @@ Resources:
       RouteTableId: !Ref IngressRtb
 
 Outputs:
+  MyStacksRegion:
+    Value: !Ref "AWS::Region"
+
   RosaVpcCIDR:
     Value: !Ref VpcCIDR
     Export:

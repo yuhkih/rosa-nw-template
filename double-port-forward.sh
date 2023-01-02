@@ -53,14 +53,13 @@ echo "[Log] Public Bastion IP is $PUBLIC_BASTION"
 export PRIVATE_BASTION=`aws ec2 describe-instances | jq -r '.Reservations[] | [.Instances[].InstanceType, .Instances[].PrivateIpAddress, .Instances[].PublicIpAddress, .Instances[].Tags[].Value ]  | @csv' | grep t2.micro | grep Private | awk -F'[,]' '{print $2}' | sed 's/"//g'`
 echo "[Log] Private Bastion IP is $PRIVATE_BASTION"
 
-
 # ---------------------------------------------------------------------------------- 
-# Terminal 1
-if [ $TERMINAL="1" ]; then
+if [ $TERMINAL = "1" ]; then
+  # Terminal 1
   echo "[Log] Login as Terminal 1" 
   ssh -i bastion-key.pem -p 22 ec2-user@$PUBLIC_BASTION -L 10022:$PRIVATE_BASTION:22
 else 
-# Terminal 2
+  # Terminal 2
   echo "[Log] Login as Terminal 2 (assuming you already have Terminal 1 session)"
   ssh -i bastion-key.pem -p 10022 ec2-user@localhost -D 10044
 fi

@@ -316,7 +316,7 @@ Resources:
   #    TransitGatewayId: !Ref TGW
   #  DependsOn: VpcBastionAttachment
 
-  # Edit Public / Private Route table in ROSA VPC (Public Subnet needs a return route to Bastion VPC)
+  # Edit Public/ FW / Private Route table in ROSA VPC (Public Subnet needs a return route to Bastion VPC)
   VpcRosaTGWRoutePrivate1:
     Type: "AWS::EC2::Route"
     Properties:

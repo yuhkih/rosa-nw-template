@@ -159,9 +159,15 @@
     ```
 1. rosa CLI を使って RHOAM をインストールします。(現状 STS 構成では GUIでの導入ができません)
     ```
-    rosa install addon --cluster <cluster-name> managed-api-service -y --addon-resource-required true --rosa-cli-required true --billing-model standard
+    rosa install addon --cluster  $ClusterName managed-api-service -y --addon-resource-required true --rosa-cli-required true --billing-model standard
+    W: Addon 'managed-api-service' needs access to resources in account '886101485601'
+    ? CIDR range: 10.1.0.0/26              # 他の VPCと被ってなければ、デフォルトで大丈夫です。
+    ? Notification email: test@redhat.com  # 自分のメールアドレス
+    ? Quota: 1                             # 1を入力します。
+    ? 3scale custom wildcard domain name (optional):   # この後はデフォルトで大丈夫です。
+    ...
     ```
-
+    - 現状、このコマンドは初回と2回目は失敗するようです。1分程度時間を置いて数回繰り返してみて下さい。
 
 
 

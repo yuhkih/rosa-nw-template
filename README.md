@@ -120,6 +120,16 @@
     この時出てきた管理者用のログインコマンドは忘れずにメモしておきます。
     ログインできるようになるまで、5分程度かかる事があります。`Login failed (401 Unauthorized)` が出る場合は、暫く待ちます。
 
+1. Identity Provider の連携として、ここでは GitHub の User 認証でログインできるようにしておきます。
+
+    ```
+    rosa create idp --type=github -c $ClusterName
+    ```
+
+    - GitHub ユーザーの少なくても一つは dedicated-admin グループに割り当て、管理者として使用します。
+    - ここでは GitHub 連携の詳細の手順は省略します。
+
+
 # RHOAM のデプロイ
 
 1. SRE が RHOAM を管理できるように SRE用の AWS Policy を作成します。

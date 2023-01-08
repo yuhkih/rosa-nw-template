@@ -64,8 +64,7 @@
     ```
 
 1. ROSA のクラスターをデプロイします。
-RHOAM の要件として、Node 数は最低4本以上の Worker Node 必要です。
-Multi AZ 構成では 3の倍数である必要があるので 6本を指定します。
+
     ```bash
     rosa create cluster --sts
     I: Enabling interactive mode
@@ -92,6 +91,7 @@ Multi AZ 構成では 3の倍数である必要があるので 6本を指定し�
     - AWS region は、 ap-northeast-1 です。
     - PrivateLink cluster (optional)は Yes にしてください。
     - PrivateLink を使った Private Cluster の場合は、途中で 3つのサブネットＩＤを指定するように指示されるので、前述のメモしてあった Private サブネットの IDを入力します。
+    - RHOAM の要件として、Node 数は最低4本以上の Worker Node 必要です。Multi AZ 構成では 3の倍数である必要があるので 6本を指定します。
 
 1. 必要な AWS の IAM Role と、OIDC Provider を作成します。
     ```
@@ -107,9 +107,18 @@ Multi AZ 構成では 3の倍数である必要があるので 6本を指定し�
 1. インストールが完了したら管理者ユーザーを作成します。
     ```
     rosa create admin -c $ClusterName
+
+    I: Admin account has been added to cluster 'mycluster'.
+    I: Please securely store this generated password. If you lose this password you can delete and recreate the cluster admin user.
+    I: To login, run the following command:
+
+   oc login https://api.mycluster.xb5p.p1.openshiftapps.com:6443 --username cluster-admin --password eKrGh-SfrLd-Evak9-abcde
+
+    I: It may take up to a minute for the account to become active.
     ```
-    ログインできるようになるまで、5分程度かかる事があります。
+   
     この時出てきた管理者用のログインコマンドは忘れずにメモしておきます。
+    ログインできるようになるまで、5分程度かかる事があります。`Login failed (401 Unauthorized)` が出る場合は、暫く待ちます。
 
 # RHOAM のデプロイ
 

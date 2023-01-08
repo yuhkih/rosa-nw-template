@@ -44,11 +44,6 @@ Parameters:
     Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
     Default: "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
 
-  AvailabilityZone1Selection:
-    Description: Availability Zone 1
-    Type: AWS::EC2::AvailabilityZone::Name
-    Default: ap-northeast-1a
-
 # ------------------------------------------------------
 # Resources
 
@@ -82,7 +77,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Ref AvailabilityZone1Selection
+      AvailabilityZone: !Select [0, !GetAZs ""]
       CidrBlock: !Ref PublicSubnetCIDR
       MapPublicIpOnLaunch: true
       Tags:
@@ -95,7 +90,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Ref AvailabilityZone1Selection
+      AvailabilityZone: !Select [0, !GetAZs ""]
       CidrBlock: !Ref PrivateSubnetCIDR
       MapPublicIpOnLaunch: false
       Tags:
@@ -151,7 +146,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${EnvironmentName} Private Routes
+          Value: !Sub ${EnvironmentName} Private Routes (AZ1)
 
   DefaultPrivateRoute1:
     Type: AWS::EC2::Route
@@ -215,10 +210,10 @@ Resources:
         - Key: Subnet
           Value: Public
       UserData:
-        Fn::Base64: |
+        Fn::Base64: !Sub |
           #!/bin/bash -xe
           exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-          sleep 120
+          sleep 60
           date > /tmp/ec2-install.log
           yum update -y
           curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz
@@ -249,10 +244,10 @@ Resources:
         - Key: Subnet
           Value: Private
       UserData:
-        Fn::Base64: |
+        Fn::Base64: !Sub |
           #!/bin/bash -xe
           exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-          sleep 120
+          sleep 60
           date > /tmp/ec2-install.log
           yum update -y
           curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz
@@ -270,6 +265,7 @@ Resources:
   # ---------------------------------------------------------------------
   #  Transit Gateway
   # --------------------------------------------------------------------
+
   # Transit Gateway itself
   TGW:
     Type: AWS::EC2::TransitGateway
@@ -308,83 +304,27 @@ Resources:
           Value: !Sub ${EnvironmentName}-ROSA-attachment
 
   # Edit Private Route Table in Bastion VPC
-  # VpcBastionTGWRoute:
-  #  Type: "AWS::EC2::Route"
-  #  Properties:
-  #    RouteTableId: !Ref PrivateRouteTable
-  #    DestinationCidrBlock: { "Fn::ImportValue": "vpc-cidr-rosa" }
-  #    TransitGatewayId: !Ref TGW
-  #  DependsOn: VpcBastionAttachment
-
-  # Edit Public / Private Route table in ROSA VPC (Public Subnet needs a return route to Bastion VPC)
-  VpcRosaTGWRoutePrivate1:
+  VpcBastionTGWRoute:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "private-rtb-id1-rosa" } # Route table ID for Private Subnet in ROSA VPC
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: { "Fn::ImportValue": "vpc-cidr-rosa" }
+      TransitGatewayId: !Ref TGW
+    DependsOn: VpcBastionAttachment
+
+  # Edit Public / Private Route table on ROSA VPC (Public Subnet needs a return route to Bastion VPC)
+  VpcRosaTGWRoutePrivate:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: { "Fn::ImportValue": "private-rtb-id-rosa" } # Route table ID for Private Subnet in ROSA VPC
       DestinationCidrBlock: !Ref VpcCIDR # If destination is Bastion VPC CIDR
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
 
-  VpcRosaTGWRouteFw1:
+  VpcRosaTGWRoutePublic:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "fw-rtb-id1-rosa" } # Route table ID for Public Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
-      TransitGatewayId: !Ref TGW # Then route to TGW
-    DependsOn: VpcRosaAttachment
-
-  VpcRosaTGWRoutePublic1:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId: { "Fn::ImportValue": "natgw-rtb-id1-rosa" } # Route table ID for Public Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
-      TransitGatewayId: !Ref TGW # Then route to TGW
-    DependsOn: VpcRosaAttachment
-    
-  VpcRosaTGWRoutePrivate2:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId: { "Fn::ImportValue": "private-rtb-id2-rosa" } # Route table ID for Private Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR # If destination is Bastion VPC CIDR
-      TransitGatewayId: !Ref TGW # Then route to TGW
-    DependsOn: VpcRosaAttachment
-  
-  VpcRosaTGWRouteFw2:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId: { "Fn::ImportValue": "fw-rtb-id2-rosa" } # Route table ID for Public Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
-      TransitGatewayId: !Ref TGW # Then route to TGW
-    DependsOn: VpcRosaAttachment
-
-  VpcRosaTGWRoutePublic2:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId: { "Fn::ImportValue": "natgw-rtb-id2-rosa" } # Route table ID for Public Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
-      TransitGatewayId: !Ref TGW # Then route to TGW
-    DependsOn: VpcRosaAttachment
-  
-  VpcRosaTGWRoutePrivate3:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId: { "Fn::ImportValue": "private-rtb-id3-rosa" } # Route table ID for Private Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR # If destination is Bastion VPC CIDR
-      TransitGatewayId: !Ref TGW # Then route to TGW
-    DependsOn: VpcRosaAttachment
-  
-  VpcRosaTGWRouteFw3:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId: { "Fn::ImportValue": "fw-rtb-id3-rosa" } # Route table ID for Public Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
-      TransitGatewayId: !Ref TGW # Then route to TGW
-    DependsOn: VpcRosaAttachment
-
-  VpcRosaTGWRoutePublic3:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId: { "Fn::ImportValue": "natgw-rtb-id3-rosa" } # Route table ID for Public Subnet in ROSA VPC
+      RouteTableId: { "Fn::ImportValue": "natgw-rtb-id-rosa" } # Route table ID for Public Subnet in ROSA VPC
       DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment

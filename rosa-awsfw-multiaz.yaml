@@ -5,6 +5,7 @@
 # 3. one bation server will be deployed on which oc and git command are already installed. This can be access directly from AWS console.
 #
 # you can choose the default IP ranges and the AZs. Please be aware the network will be deployed in Japan as default.
+# Test log : 2023/01/06 verified unitl the VPC creation => 
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Multi AZ network with FW"
@@ -18,10 +19,6 @@ Metadata:
           - AvailabilityZone1Selection
           - AvailabilityZone2Selection
           - AvailabilityZone3Selection
-      - Label:
-          default: "EC2 Parameters"
-        Parameters:
-          - LatestAmiId
 
 Parameters:
   EnvironmentName:
@@ -98,11 +95,6 @@ Parameters:
     Type: AWS::EC2::AvailabilityZone::Name
     Default: ap-northeast-1d
 
-  LatestAmiId:
-    Description: Latest EC2 AMI from Systems Manager Parameter Store
-    Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
-    Default: "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
-
 Resources:
   # VPC:
   VPCA:
@@ -149,9 +141,7 @@ Resources:
   NatGw1:
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: !GetAtt
-        - NatGw1Eip
-        - AllocationId
+      AllocationId: !GetAtt NatGw1Eip.AllocationId
       SubnetId: !Ref NatgwSubnet1
       Tags:
         - Key: Name
@@ -160,9 +150,7 @@ Resources:
   NatGw2:
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: !GetAtt
-        - NatGw2Eip
-        - AllocationId
+      AllocationId: !GetAtt NatGw2Eip.AllocationId
       SubnetId: !Ref NatgwSubnet2
       Tags:
         - Key: Name
@@ -171,9 +159,7 @@ Resources:
   NatGw3:
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: !GetAtt
-        - NatGw3Eip
-        - AllocationId
+      AllocationId: !GetAtt NatGw3Eip.AllocationId
       SubnetId: !Ref NatgwSubnet3
       Tags:
         - Key: Name
@@ -272,6 +258,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-Firewall-Subnet1
+        - Key: kubernetes.io/role/elb
+          Value: "true"
 
   FirewallSubnet2:
     Type: AWS::EC2::Subnet
@@ -285,6 +273,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-Firewall-Subnet2
+        - Key: kubernetes.io/role/elb
+          Value: "true"
 
   FirewallSubnet3:
     Type: AWS::EC2::Subnet
@@ -298,6 +288,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-Firewall-Subnet3
+        - Key: kubernetes.io/role/elb
+          Value: "true"
 
   # AWS PrivateLink interface endpoint for services:
   VPCAEndpointSecurityGroup:
@@ -428,9 +420,7 @@ Resources:
     Properties:
       FunctionName: !Sub "RetrieveVpceId-${AWS::StackName}"
       Handler: "index.handler"
-      Role: !GetAtt
-        - LambdaExecutionRole
-        - Arn
+      Role: !GetAtt LambdaExecutionRole.Arn
       Code:
         ZipFile: |
           import boto3
@@ -621,6 +611,15 @@ Resources:
               - "api.github.com" # added for GitHub IdP
               - "acme-v02.api.letsencrypt.org" # Added for Let's Encrypt
               - "acme-staging-v02.api.letsencrypt.org" # Added for Let's Encrypt
+              - ".openshiftapps.com"   # For public cluster installation. You can narrow down this domain after installation complete to like ".apps.<cluster name>.<random>.<random>.openshiftapps.com"
+              - "registry-1.docker.io" # The following added for RHOAM
+              - "gcr.io"
+              - "smtp.sendgrid.net"
+              - "grafana.com"
+              - "raw.githubusercontent.com"
+              - "auth.docker.io"
+              - "production.cloudflare.docker.com"
+              - "codeload.github.com"
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name
@@ -628,13 +627,6 @@ Resources:
 
   #VPCA Firewall Policy:
   EgressFirewallPolicy:
-    DependsOn:
-      [
-        ICMPAlertStatefulRuleGroup,
-        DomainAllowStatefulRuleGroup,
-        DomainAllowStatefulRuleGroupForApp,
-        SplunkAllowStatefulRuleGroup,
-      ]
     Type: AWS::NetworkFirewall::FirewallPolicy
     Properties:
       FirewallPolicyName: !Sub ${EnvironmentName}-InspectionFirewall-Policy
@@ -980,3 +972,98 @@ Outputs:
     Value: !Ref NatgwRtb1
     Export:
       Name: natgw-rtb-id-rosa
+
+# add new
+  RosaPrivateSubnetID1:
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: private-subnet-id1-rosa
+
+  RosaNatGwSubnetID1:
+    Value: !Ref NatgwSubnet1
+    Export:
+      Name: natgw-subnet-id1-rosa
+
+  RosaFwSubnetID1:
+    Value: !Ref FirewallSubnet1
+    Export:
+      Name: fw-subnet-id1-rosa
+
+  RosaPrivateRouteTableID1:
+    Value: !Ref PrivateRtb1
+    Export:
+      Name: private-rtb-id1-rosa
+
+  RosaNatGwRouteTableID1:
+    Value: !Ref NatgwRtb1
+    Export:
+      Name: natgw-rtb-id1-rosa
+  
+  RosaFwRouteTableID1:
+    Value: !Ref FirewallRtb1
+    Export:
+      Name: fw-rtb-id1-rosa
+
+# add new
+  RosaPrivateSubnetID2:
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: private-subnet-id2-rosa
+
+  RosaNatGwSubnetID2:
+    Value: !Ref NatgwSubnet2
+    Export:
+      Name: natgw-subnet-id2-rosa
+  
+  RosaFwSubnetID2:
+    Value: !Ref FirewallSubnet2
+    Export:
+      Name: fw-subnet-id2-rosa
+
+  RosaPrivateRouteTableID2:
+    Value: !Ref PrivateRtb2
+    Export:
+      Name: private-rtb-id2-rosa
+
+  RosaNatGwRouteTableID2:
+    Value: !Ref NatgwRtb2
+    Export:
+      Name: natgw-rtb-id2-rosa
+
+  RosaFwRouteTableID2:
+    Value: !Ref FirewallRtb2
+    Export:
+      Name: fw-rtb-id2-rosa
+
+
+# add new
+  RosaPrivateSubnetID3:
+    Value: !Ref PrivateSubnet3
+    Export:
+      Name: private-subnet-id3-rosa
+
+  RosaNatGwSubnetID3:
+    Value: !Ref NatgwSubnet3
+    Export:
+      Name: natgw-subnet-id3-rosa
+  
+  RosaFwSubnetID3:
+    Value: !Ref FirewallSubnet3
+    Export:
+      Name: fw-subnet-id3-rosa
+
+
+  RosaPrivateRouteTableID3:
+    Value: !Ref PrivateRtb3
+    Export:
+      Name: private-rtb-id3-rosa
+
+  RosaNatGwRouteTableID3:
+    Value: !Ref NatgwRtb3
+    Export:
+      Name: natgw-rtb-id3-rosa
+
+  RosaFwRouteTableID3:
+    Value: !Ref FirewallRtb3
+    Export:
+      Name: fw-rtb-id3-rosa

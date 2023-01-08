@@ -371,14 +371,19 @@ Resources:
               - "acme-v02.api.letsencrypt.org" # Added for Let's Encrypt
               - "acme-staging-v02.api.letsencrypt.org" # Added for Let's Encrypt
               - ".openshiftapps.com"  # For public cluster installation. You can narrow down this domain after installation complete to like ".apps.<cluster name>.<random>.<random>.openshiftapps.com"
-              - "registry-1.docker.io" # The following added for RHOAM
-              - "gcr.io"
-              - "smtp.sendgrid.net"
-              - "grafana.com"
-              - "raw.githubusercontent.com"
-              - "auth.docker.io"
-              - "production.cloudflare.docker.com"
-              - "codeload.github.com"
+              - "registry-1.docker.io"              # RHOAM
+              - "gcr.io"                            # RHOAM
+              - "smtp.sendgrid.net"                 # RHOAM
+              - "grafana.com"                       # RHOAM
+              - "raw.githubusercontent.com"         # RHOAM
+              - "auth.docker.io"                    # RHOAM
+              - "production.cloudflare.docker.com"  # RHOAM
+              - "codeload.github.com"               # RHOAM
+              - "aws.amazon.com"                    # RHOAM
+              - "www.redhat.com"                    # RHOAM
+              - "www.okd.io"                        # RHOAM
+              - "access.redhat.com"                 # RHOAM
+              - "observatorium.api.openshift.com"   # RHOAM
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name

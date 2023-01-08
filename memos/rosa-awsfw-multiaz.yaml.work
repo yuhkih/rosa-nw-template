@@ -612,21 +612,15 @@ Resources:
               - "acme-v02.api.letsencrypt.org" # Added for Let's Encrypt
               - "acme-staging-v02.api.letsencrypt.org" # Added for Let's Encrypt
               - ".openshiftapps.com"   # For public cluster installation. You can narrow down this domain after installation complete to like ".apps.<cluster name>.<random>.<random>.openshiftapps.com"
-              - "registry-1.docker.io"              # RHOAM
-              - "gcr.io"                            # RHOAM
-              - "smtp.sendgrid.net"                 # RHOAM
-              - "grafana.com"                       # RHOAM
-              - "raw.githubusercontent.com"         # RHOAM
-              - "auth.docker.io"                    # RHOAM
-              - "production.cloudflare.docker.com"  # RHOAM
-              - "codeload.github.com"               # RHOAM
-              - "aws.amazon.com"                    # RHOAM
-              - "www.redhat.com"                    # RHOAM
-              - "www.okd.io"                        # RHOAM
-              - "access.redhat.com"                 # RHOAM
-              - "observatorium.api.openshift.com"   # RHOAM
-            GeneratedRulesType: "ALLOWLIST"         
-
+              - "registry-1.docker.io" # The following added for RHOAM
+              - "gcr.io"
+              - "smtp.sendgrid.net"
+              - "grafana.com"
+              - "raw.githubusercontent.com"
+              - "auth.docker.io"
+              - "production.cloudflare.docker.com"
+              - "codeload.github.com"
+            GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-DomainAllow-RuleGroup-For-Application
@@ -717,7 +711,7 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1 # NatGatewayId: !Ref NatGw1
+      NatGatewayId: !Ref NatGw1
       RouteTableId: !Ref PrivateRtb1
 
   PrivateRtb2:
@@ -738,7 +732,7 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId2 # !Ref NatGw2
+      NatGatewayId: !Ref NatGw2
       RouteTableId: !Ref PrivateRtb2
 
   PrivateRtb3:
@@ -759,7 +753,7 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId3 #  !Ref NatGw3
+      NatGatewayId: !Ref NatGw3
       RouteTableId: !Ref PrivateRtb3
 
   # NATGW Route Tables:
@@ -770,8 +764,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-NatgwRouteTable1
-        - Key: AZ
-          Value:  !Ref AvailabilityZone1Selection
 
   NatgwRtb1Association:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -784,9 +776,8 @@ Resources:
     DependsOn: VPCAFirewall
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway # !GetAtt FirewallVpceIds.FwVpceId1
+      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
       RouteTableId: !Ref NatgwRtb1
-
 
   NatgwRtb2:
     Type: AWS::EC2::RouteTable
@@ -795,8 +786,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-NatgwRouteTable2
-        - Key: AZ
-          Value: !Ref AvailabilityZone2Selection
 
   NatgwRtb2Association:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -809,9 +798,8 @@ Resources:
     DependsOn: VPCAFirewall
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway # !GetAtt FirewallVpceIds.FwVpceId2
+      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId2
       RouteTableId: !Ref NatgwRtb2
-
 
   NatgwRtb3:
     Type: AWS::EC2::RouteTable
@@ -820,8 +808,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-NatgwRouteTable3
-        - Key: AZ
-          Value: !Ref AvailabilityZone3Selection
 
   NatgwRtb3Association:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -834,9 +820,8 @@ Resources:
     DependsOn: VPCAFirewall
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway # !GetAtt FirewallVpceIds.FwVpceId3
+      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId3
       RouteTableId: !Ref NatgwRtb3
-
 
   # Firewall Route Tables:
   FirewallRtb1:
@@ -857,7 +842,7 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref NatGw1 #  !Ref InternetGateway 
+      GatewayId: !Ref InternetGateway
       RouteTableId: !Ref FirewallRtb1
 
   FirewallRtb2:
@@ -878,7 +863,7 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref NatGw2 # !Ref InternetGateway
+      GatewayId: !Ref InternetGateway
       RouteTableId: !Ref FirewallRtb2
 
   FirewallRtb3:
@@ -899,10 +884,47 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref NatGw3 # !Ref InternetGateway
+      GatewayId: !Ref InternetGateway
       RouteTableId: !Ref FirewallRtb3
 
- 
+  # Ingress Route Table:
+  IngressRtb:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPCA
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-IngressRouteTable
+
+  IngressRtbAssociation:
+    Type: AWS::EC2::GatewayRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref IngressRtb
+      GatewayId: !Ref InternetGateway
+
+  IngressRtbNatgwSubnet1Route:
+    Type: AWS::EC2::Route
+    DependsOn: VPCAFirewall
+    Properties:
+      DestinationCidrBlock: !Ref Natgw1CIDR
+      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
+      RouteTableId: !Ref IngressRtb
+
+  IngressRtbNatgwSubnet2Route:
+    Type: AWS::EC2::Route
+    DependsOn: VPCAFirewall
+    Properties:
+      DestinationCidrBlock: !Ref Natgw2CIDR
+      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId2
+      RouteTableId: !Ref IngressRtb
+
+  IngressRtbNatgwSubnet3Route:
+    Type: AWS::EC2::Route
+    DependsOn: VPCAFirewall
+    Properties:
+      DestinationCidrBlock: !Ref Natgw3CIDR
+      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId3
+      RouteTableId: !Ref IngressRtb
 
 Outputs:
   MyStacksRegion:

@@ -69,7 +69,7 @@ Multi AZ 構成では 3の倍数である必要があるので 6本を指定し�
     ```bash
     rosa create cluster --sts
     I: Enabling interactive mode
-    ? Cluster name: mycluster
+    ? Cluster name:　<クラスター名>
     ...
     ...
     ? External ID (optional): 
@@ -95,7 +95,7 @@ Multi AZ 構成では 3の倍数である必要があるので 6本を指定し�
 
 1. 必要な AWS の IAM Role と、OIDC Provider を作成します。
     ```
-    ClusterName=<クラスター名>
+    ClusterName=<クラスター名>  # rosa create cluster　で指定した値
     rosa create operator-roles -y -m auto --cluster $ClusterName
     rosa create oidc-provider -y -m auto --cluster $ClusterName
     ```
@@ -168,8 +168,16 @@ Multi AZ 構成では 3の倍数である必要があるので 6本を指定し�
 
 1. ROSA の VPC の Route 53 の 設定を編集します。
 
-    この設定は、現在サポートされるかどうか不明なので、設定が取り消される可能性がある事に注意してください。その場合は、必要なドメイン名とホスト名を bastion の /etc/hosts に登録しておく必要があります。
+    この設定は、現在サポートされるかどうか不明なので、設定が取り消される可能性がある事に注意してください。
 
+    Route53の画面で`プライベート`の Zone を探します。
+    ![Route53 設定1](./images/route53-zone1.png "プライベートゾーン")
+
+    `プライベート`Zone のい設定の`ホストゾーンに関連付けるVPC`で、bastion VPＣを指定します。
+    ![Route53 設定2](./images/route53-zone2.png "プライベートゾーン")
+    これで、Bastion 側から ROSAのドメインの名前解決ができるようになります。
+
+    (サポート内に収める方法としては、必要なドメイン名とホスト名を bastion の /etc/hosts に登録しておく方法もあります。その場合は、IPアドレスが変わる可能性があるので定期的にメンテする必要が出てくるかもしれません)
 # 踏み台 EC2へのログイン
 
 1. Linux の端末を2つ用意します。

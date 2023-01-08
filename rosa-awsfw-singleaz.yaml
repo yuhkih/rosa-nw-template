@@ -384,6 +384,7 @@ Resources:
               - "www.okd.io"                        # RHOAM
               - "access.redhat.com"                 # RHOAM
               - "observatorium.api.openshift.com"   # RHOAM
+              - "objects.githubusercontent.com"     # RHOAM
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name

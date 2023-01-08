@@ -127,7 +127,7 @@
     ```
 
     - GitHub ユーザーの少なくても一つは dedicated-admin グループに割り当て、管理者として使用します。
-    - ここでは GitHub 連携の詳細の手順は省略します。
+    - ここでは GitHub 連携の詳細の手順は省略します。[こちらを](https://qiita.com/Yuhkih/items/367eccc0cfe64dfbd915#github-id-%E9%80%A3%E6%90%BA) 参照して下さい。
 
 
 # RHOAM のデプロイ

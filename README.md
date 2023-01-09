@@ -181,7 +181,7 @@
 
 
 
-# 踏み台用 VPC / Transit Gateway と踏み台のデプロイ
+# Bastion 用 VPC / Bastion / Transit Gateway のデプロイ
 
 
 1. 以下の CloudFormation のテンプレートを使用してスタックを作成します。
@@ -203,6 +203,7 @@
     これで、Bastion 側から ROSAのドメインの名前解決ができるようになります。
 
     (サポート内に収める方法としては、必要なドメイン名とホスト名を bastion の /etc/hosts に登録しておく方法もあります。その場合は、IPアドレスが変わる可能性があるので定期的にメンテする必要が出てくるかもしれません)
+    
 # SSH Port foward の設定と Bastion へのログイン
 
 Private Subnet に接続された Bastion にログインするには、SSH Port Forward を設定する必要がありますが、ここでは手順がシェル化されています。

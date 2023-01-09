@@ -61,7 +61,7 @@ if [ $TERMINAL = "1" ]; then
 else 
   # Terminal 2
   echo "[Log] Login as Terminal 2 (assuming you already have Terminal 1 session)"
-  ssh-keygen -f "/home/yuhki/.ssh/known_hosts" -R "[localhost]:10022"
+  ssh-keygen -f ~/.ssh/known_hosts -R "[localhost]:10022"
   ssh -i bastion-key.pem -p 10022 ec2-user@localhost -D 10044
   echo "[Log] You need to add your VPC to Route53 zone as a related VPC so that you can resolve domain names created by ROSA from this bastion."
 fi

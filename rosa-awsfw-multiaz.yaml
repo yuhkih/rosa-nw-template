@@ -626,6 +626,7 @@ Resources:
               - "access.redhat.com"                 # RHOAM
               - "observatorium.api.openshift.com"   # RHOAM
               - "objects.githubusercontent.com"     # RHOAM
+              - "echo-api.3scale.net"               # RHOAM
             GeneratedRulesType: "ALLOWLIST"         
 
       Tags:

@@ -11,7 +11,7 @@
 
 1. 以下の CloudFormation のテンプレートを使用して、ROSA をインストールするためのネットワークを作成します。
     ```
-    rosa-awsfw-multiaz.yaml
+    rosa-PRV_FW_NAT-mz.yaml
     ```
     デプロイ完了まで待ちます。
 
@@ -65,6 +65,8 @@
 
 1. ROSA のクラスターをデプロイします。
 
+    `rosa create  cluster --sts` で開始し、インタラクティブ型式でパラメーターを埋めていきます。
+
     ```bash
     rosa create cluster --sts
     I: Enabling interactive mode
@@ -99,7 +101,11 @@
     rosa create operator-roles -y -m auto --cluster $ClusterName
     rosa create oidc-provider -y -m auto --cluster $ClusterName
     ```
-    (この作業をしないと rosa create cluster が途中で止まったままになっています)
+    
+    > この作業をしないと `rosa create cluster` が途中で止まったままになり、cluster 作成が進みません。
+
+
+    
 1. インストールが終わるまで待ちます。
     ```
     rosa logs install -c $ClusterName --watch
@@ -118,7 +124,9 @@
     ```
    
     この時出てきた管理者用のログインコマンドは忘れずにメモしておきます。
-    ログインできるようになるまで、5分程度かかる事があります。`Login failed (401 Unauthorized)` が出る場合は、暫く待ちます。
+    ログインできるようになるまで、5分程度かかる事があります。
+    
+    `Login failed (401 Unauthorized)` が出てきても正常です。暫く待てばログインできるようになるはずです。
 
 1. Identity Provider の連携として、ここでは GitHub の User 認証でログインできるようにしておきます。
 
@@ -198,14 +206,16 @@
     Route53の画面で`プライベート`の Zone を探します。
     ![Route53 設定1](./images/route53-zone1.png "プライベートゾーン")
 
-    `プライベート`Zone のい設定の`ホストゾーンに関連付けるVPC`で、bastion VPＣを指定します。
+    `プライベート`Zone の設定の`ホストゾーンに関連付けるVPC`で、bastion VPＣを指定します。
     ![Route53 設定2](./images/route53-zone2.png "プライベートゾーン")
     これで、Bastion 側から ROSAのドメインの名前解決ができるようになります。
+    設定後、名前解決ができるようになるまで、1分以上かかるかもしれません。
 
     (サポート内に収める方法としては、必要なドメイン名とホスト名を bastion の /etc/hosts に登録しておく方法もあります。その場合は、IPアドレスが変わる可能性があるので定期的にメンテする必要が出てくるかもしれません)
 # SSH Port foward の設定と Bastion へのログイン
 
-Private Subnet に接続された Bastion にログインするには、SSH Port Forward を設定する必要がありますが、ここでは手順がシェル化されています。
+## CLI ログイン環境のセットアップ
+Private Subnet に接続された Bastion にログインするには、SSH Port Forward を設定する必要がありますが、ここでは手順をシェル化しています。
 
 SSHの鍵は CloudFormation で Bastionがデプロイされた時に AWS 上に保管されたものを、シェル内でダウンロードして使用しています。
 
@@ -228,3 +238,40 @@ SSHの鍵は CloudFormation で Bastionがデプロイされた時に AWS 上に
 
     この端末から oc コマンドなどが実行できるはずです。
     - 踏み台サーバー作成時に oc コマンド等が自動でインストールされているはずですが、まれに失敗している場合があるので、その場合は手動でインストールして下さい。
+
+
+## ブラウザアクセスのセットアップ
+
+幾つかの場面では、GUI が使えた方が便利なケースがあります。
+上記の SSH Port Forward の設定をした後、以下の作業を行います。
+
+1. 踏み台サーバーから、openshift console の名前を に解決します。
+
+    ```
+    dig +short console-openshift-console.apps.mycluster.xb5p.p1.openshiftapps.com 
+    10.0.1.44
+    ```
+    
+    このIPアドレスを覚えておきます。
+
+1. hosts ファイルを編集します。
+
+    `/etc/hosts` ファイル (Windows の場合は、`C:\Windows\System32\drivers\etc\hosts`) に以下のエントリーを作成します。
+
+    | IP address  | ドメイン名                                   |　用途 |
+    | ------------| --------------------------------------------| ---- |
+    | 10.0.1.44  | console-openshift-console.apps.mycluster.xb5p.p1.openshiftapps.com | OpenShift console |
+    | 10.0.1.44  | oauth-openshift.apps.mycluster.xb5p.p1.openshiftapps.com | OAuth Server |
+    | 10.0.1.44  | 3scale-admin.apps.mycluster.xb5p.p1.openshiftapps.com | 3 Scale Console |
+    | 10.0.1.44  | keycloak-edge-redhat-rhoam-rhsso.apps.mycluster.xb5p.p1.openshiftapps.com | Keycloack Console | 
+    > - IP アドレスは全て同じでも大丈夫です。
+    > - apps 以降のドメイン名はユーザー環境によって違います。
+
+1. ブラウザーに Socks サーバーを設定します。
+    
+    Firefox の例ですが、「Network Settings」で以下のように設定します。
+
+    - localhost の 10044 ポート を Proxy 先として指定します。
+    - Proxy DNS when using SOCKS v5 にチェックを入れます。
+
+    ![Firefox 設定](./images/firefox-proxy.png "プライベートゾーン")

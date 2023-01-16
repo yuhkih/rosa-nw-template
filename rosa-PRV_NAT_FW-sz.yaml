@@ -414,7 +414,11 @@ Resources:
               - "access.redhat.com"                 # RHOAM
               - "observatorium.api.openshift.com"   # RHOAM
               - "objects.githubusercontent.com"     # RHOAM
+<<<<<<< HEAD:rosa-PRV_NAT_FW-sz.yaml
               - "catalog.redhat.com"                # ? this was logged.
+=======
+              - "echo-api.3scale.net"               # RHOAM
+>>>>>>> 06c46db00fe04f51287a2eed4d556ce83deb93ad:rosa-awsfw-singleaz.yaml
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name

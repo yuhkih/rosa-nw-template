@@ -2,10 +2,35 @@
 # 1. Three subnets for each AZ.
 #    Privarte subnet - NATGW subent - FW (Public) subnet - Internet Gateway
 # 2. AWS firewall deployed with a policy which allow all the domains listed on the ROSA document as prerequistes for egress.
-# 3. one bation server will be deployed on which oc and git command are already installed. This can be access directly from AWS console.
 #
-# you can choose the default IP ranges and the AZs. Please be aware the network will be deployed in Japan as default.
-# Test log : 2023/01/06 verified unitl the VPC creation => 
+# This template will create the following Network Firewall rules
+#
+#    1) singleaz-DomainAllow-RuleGroup  based on ROSA requirments
+#    2) singleaz-SplunkAllow-RuleGroup  based on ROSA requiremnts (Splunk)
+#    3) singleaz-DomainAllow-RuleGroup-For-Application   For test perpose +  RHOAM (based on blocked logs)
+#    4) singleaz-IcmpAlert-RuleGroup    This crates alert when someone uses ICMP ping in VPC.
+#    
+# This deploys following network model
+#   [Private Subnet] => [ FW Subnet] => [ NATGW(protected) Subnet] 
+#   The model is based on the following AWS blog post.
+#   https://aws.amazon.com/jp/blogs/networking-and-content-delivery/deployment-models-for-aws-network-firewall-with-vpc-routing-enhancements/
+#
+#   [Notice!!!] This template can't rewrite default route entry of Natgateway subent "10.0.0.0/16   local " 
+#               So, you need to change the entry after delploying this template like below.
+#                Destionation    Target              Destination      Target
+#               "10.0.0.0/16     local "   =====>   "10.0.0.0/16      fiewall-endpoint-id
+#
+# History 
+# 2023/01/13 yuhkih　add  "catalog.redhat.com" to FW for ?
+# 2023/01/14 yuhkih Added allow domains to setup an EC2 for Let's Encrypt (needed in case you put the EC2 in ROSA VPC)
+#              - "dl.fedoraproject.org"          # Added to setup EC2 for Let's Encrypt
+#              - "mirrors.fedoraproject.org"     # Added to setup EC2 for Let's Encrypt
+#              - "d2lzkl7pfhq30w.cloudfront.net" # Added to setup EC2 for Let's Encrypt
+#              - "epel.mirror.angkasa.id"        # Added to setup EC2 for Let's Encrypt
+#              - "ftp.riken.jp"                  # Added to setup EC2 for Let's Encrypt
+#              - "ftp.iij.ad.jp"                 # Added to setup EC2 for Let's Encrypt
+#              - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
+# 2023/01/14 yuhkih removed uncessary subnet id / route table id ()
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Multi AZ network with FW"
@@ -611,6 +636,13 @@ Resources:
               - "api.github.com" # added for GitHub IdP
               - "acme-v02.api.letsencrypt.org" # Added for Let's Encrypt
               - "acme-staging-v02.api.letsencrypt.org" # Added for Let's Encrypt
+              - "dl.fedoraproject.org"          # Added to setup EC2 for Let's Encrypt
+              - "mirrors.fedoraproject.org"     # Added to setup EC2 for Let's Encrypt
+              - "d2lzkl7pfhq30w.cloudfront.net" # Added to setup EC2 for Let's Encrypt
+              - "epel.mirror.angkasa.id"        # Added to setup EC2 for Let's Encrypt
+              - "ftp.riken.jp"                  # Added to setup EC2 for Let's Encrypt
+              - "ftp.iij.ad.jp"                 # Added to setup EC2 for Let's Encrypt
+              - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
               - ".openshiftapps.com"   # For public cluster installation. You can narrow down this domain after installation complete to like ".apps.<cluster name>.<random>.<random>.openshiftapps.com"
               - "registry-1.docker.io"              # RHOAM
               - "gcr.io"                            # RHOAM
@@ -626,6 +658,7 @@ Resources:
               - "access.redhat.com"                 # RHOAM
               - "observatorium.api.openshift.com"   # RHOAM
               - "objects.githubusercontent.com"     # RHOAM
+              - "catalog.redhat.com"                # ?
             GeneratedRulesType: "ALLOWLIST"         
 
       Tags:
@@ -932,27 +965,7 @@ Outputs:
     Export:
       Name: vpc-id-rosa
 
-  RosaPrivateSubnetID:
-    Value: !Ref PrivateSubnet1
-    Export:
-      Name: private-subnet-id-rosa
-
-  RosaNatGwSubnetID:
-    Value: !Ref NatgwSubnet1
-    Export:
-      Name: natgw-subnet-id-rosa
-
-  RosaPrivateRouteTableID:
-    Value: !Ref PrivateRtb1
-    Export:
-      Name: private-rtb-id-rosa
-
-  RosaNatGwRouteTableID:
-    Value: !Ref NatgwRtb1
-    Export:
-      Name: natgw-rtb-id-rosa
-
-# add new
+# For AZ1 variables
   RosaPrivateSubnetID1:
     Value: !Ref PrivateSubnet1
     Export:
@@ -983,7 +996,8 @@ Outputs:
     Export:
       Name: fw-rtb-id1-rosa
 
-# add new
+# For AZ2 variables
+
   RosaPrivateSubnetID2:
     Value: !Ref PrivateSubnet2
     Export:
@@ -1014,8 +1028,8 @@ Outputs:
     Export:
       Name: fw-rtb-id2-rosa
 
+# For AZ3 variables
 
-# add new
   RosaPrivateSubnetID3:
     Value: !Ref PrivateSubnet3
     Export:
@@ -1030,7 +1044,6 @@ Outputs:
     Value: !Ref FirewallSubnet3
     Export:
       Name: fw-subnet-id3-rosa
-
 
   RosaPrivateRouteTableID3:
     Value: !Ref PrivateRtb3

@@ -1,10 +1,19 @@
-# The following will be deployed with this CF
-# 1. Three subnets for each AZ. (Thins template is for single AZ)
-#    Privarte subnet - NATGW subent - FW (Public) subnet - Internet Gateway
-# 2. AWS firewall deployed with a policy which allow all the domains listed on the ROSA document as prerequistes for egress.
-# 3. one bation server will be deployed on which oc and git command are already installed.
+# This will create a SSM bastion server.
+# You can use this template with the following template which export necessary variables for this template.
 #
-# you can choose the default IP ranges and the AZs. Please be aware the network will be deployed in Japan as default.
+#   1) rosa-awsfw-pnFW-saz.yaml  Tested OK
+#   2) rosa-awsfw-pFWn-saz.yaml
+#
+#    Three Endpoints will be craeted in NATGW subnet.
+# 
+# History
+# 2023/01/13 yuhkih fix ImportValue
+# 2023/01/14 yuhkih extended wait time to 180 from 120 before installing command line tools.
+# 2023/01/15 yuhkih change to "echo "set -o vi" >> /home/ssm-user/.bash_profile" (the instance default user is "ssm-user")
+# 2023/01/15 yuhkih made to have endpoints in private subnet
+# 2023/01/15 yuhkih add chmod 444 /tmp/ec2-install.log
+# 2023/01/15 yuhkih add Let's Encrypt module installation
+# 2023/01/15 yuhkih changed to create Endpoints in Private Subnet from Natgateway subnet
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Add SSM bastion to specified VPC"
@@ -56,7 +65,7 @@ Resources:
         - !Ref VPCAEndpointSecurityGroup
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
       SubnetIds:
-        - { "Fn::ImportValue": "natgw-subnet-id-rosa" }
+        - { "Fn::ImportValue": "private-subnet-id1-rosa" }
       VpcEndpointType: Interface
       VpcId: { "Fn::ImportValue": "vpc-id-rosa" } # ROSA VPC ID
 
@@ -68,7 +77,7 @@ Resources:
         - !Ref VPCAEndpointSecurityGroup
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
       SubnetIds:
-        - { "Fn::ImportValue": "natgw-subnet-id-rosa" }
+        - { "Fn::ImportValue": "private-subnet-id1-rosa" }
       VpcEndpointType: Interface
       VpcId: { "Fn::ImportValue": "vpc-id-rosa" } # ROSA VPC ID
 
@@ -80,7 +89,7 @@ Resources:
         - !Ref VPCAEndpointSecurityGroup
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
       SubnetIds:
-        - { "Fn::ImportValue": "natgw-subnet-id-rosa" }
+        - { "Fn::ImportValue": "private-subnet-id1-rosa" }
       VpcEndpointType: Interface
       VpcId: { "Fn::ImportValue": "vpc-id-rosa" } # ROSA VPC ID
 
@@ -138,7 +147,7 @@ Resources:
     Properties:
       ImageId: !Ref LatestAmiId
       KeyName: !Ref NewKeyPair
-      SubnetId: { "Fn::ImportValue": "natgw-subnet-id-rosa" } # subnet id where the SSM bastion will be created
+      SubnetId: { "Fn::ImportValue": "natgw-subnet-id1-rosa" } # subnet id where the SSM bastion will be created
       InstanceType: t2.micro
       SecurityGroupIds:
         - !Ref SubnetSecurityGroup
@@ -150,9 +159,11 @@ Resources:
         Fn::Base64: |
           #!/bin/bash -xe
           exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-          sleep 120
+          sleep 180
           date > /tmp/ec2-install.log
-          yum update -y
+          chmod 444 /tmp/ec2-install.log
+          whoami >> /tmp/ec2-install.log
+          sudo yum update -y
           curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz
           tar -zxf rosa-linux.tar.gz 
           sudo mv ./rosa /usr/local/bin/
@@ -164,6 +175,12 @@ Resources:
           sudo yum install -y git
           git version >> /tmp/ec2-install.log
           sudo yum install -y jq
+          echo "set -o vi" >> /home/ssm-user/.bash_profile
+          echo "install Let's Encrypt modules" >> /tmp/ec2-install.log
+          sudo wget -r --no-parent -A 'epel-release-*.rpm' https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/
+          sudo rpm -Uvh dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-*.rpm
+          sudo amazon-linux-extras install epel -y
+          sudo yum install -y certbot python2-certbot-apache 
 
 # ------------------------------------------------------
 # Out put

@@ -1,3 +1,13 @@
+# This CFn template depends on external variables which are created by ROSA CFn template.
+# search "Fn::ImportValue" within this file
+#
+# History 
+# 2023/01/13 yuhkih Removed route table modification for AZ2 and AZ3 to make this file adapt to singale AZ ROSA. 
+# 2023/01/13 yuhkih Removed unnecessary Output
+# 2023/01/14 yuhkih private-subnet-id-rosa　=> private-subnet-id1-rosa
+# 2023/01/14 yuhkih add "set -o vi"
+# 2023/01/15 yuhkih add chmod 444 /tmp/ec2-install.log
+
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Bastion VPC (prublic / private subnet ) which has a bation server in each subnet and Transit Gateway to a specifed VPC"
 
@@ -220,6 +230,7 @@ Resources:
           exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
           sleep 120
           date > /tmp/ec2-install.log
+          chmod 444 /tmp/ec2-install.log
           yum update -y
           curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz
           tar -zxf rosa-linux.tar.gz 
@@ -228,10 +239,11 @@ Resources:
           tar -xzf openshift-client-linux.tar.gz 
           sudo mv ./oc /usr/local/bin
           sudo mv ./kubectl /usr/local/bin
-          oc version  >> /tmp/ec2-install.log
+          sudo oc version  >> /tmp/ec2-install.log
           sudo yum install -y git
-          git version >> /tmp/ec2-install.log
+          sudo git version >> /tmp/ec2-install.log
           sudo yum install -y jq
+          sudo echo "set -o vi" >> /home/ec2-user/.bash_profile
 
   # Bastion2 (Private Subnet)
   BastionInstance2:
@@ -252,8 +264,9 @@ Resources:
         Fn::Base64: |
           #!/bin/bash -xe
           exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-          sleep 120
+          sleep 180
           date > /tmp/ec2-install.log
+          chmod 444 /tmp/ec2-install.log
           yum update -y
           curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz
           tar -zxf rosa-linux.tar.gz 
@@ -266,6 +279,12 @@ Resources:
           sudo yum install -y git
           git version >> /tmp/ec2-install.log
           sudo yum install -y jq
+          sudo echo "set -o vi" >> /home/ec2-user/.bash_profile
+          echo "install Let's Encrypt modules" >> /home/ec2-user/.bash_profile
+          sudo wget -r --no-parent -A 'epel-release-*.rpm' https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/
+          sudo rpm -Uvh dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-*.rpm
+          sudo amazon-linux-extras install epel -y
+          sudo yum install -y certbot python2-certbot-apache 
 
   # ---------------------------------------------------------------------
   #  Transit Gateway
@@ -300,7 +319,7 @@ Resources:
     Type: AWS::EC2::TransitGatewayAttachment
     Properties:
       SubnetIds:
-        - { "Fn::ImportValue": "private-subnet-id-rosa" }
+        - { "Fn::ImportValue": "private-subnet-id1-rosa" }
       TransitGatewayId: !Ref TGW
       VpcId: { "Fn::ImportValue": "vpc-id-rosa" }
       Tags:
@@ -341,53 +360,16 @@ Resources:
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
     
-  VpcRosaTGWRoutePrivate2:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId: { "Fn::ImportValue": "private-rtb-id2-rosa" } # Route table ID for Private Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR # If destination is Bastion VPC CIDR
-      TransitGatewayId: !Ref TGW # Then route to TGW
-    DependsOn: VpcRosaAttachment
-  
-  VpcRosaTGWRouteFw2:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId: { "Fn::ImportValue": "fw-rtb-id2-rosa" } # Route table ID for Public Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
-      TransitGatewayId: !Ref TGW # Then route to TGW
-    DependsOn: VpcRosaAttachment
 
-  VpcRosaTGWRoutePublic2:
+  # Edit Private Route Table in Bastion VPC
+  VpcBastionTGWRoute:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "natgw-rtb-id2-rosa" } # Route table ID for Public Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
-      TransitGatewayId: !Ref TGW # Then route to TGW
-    DependsOn: VpcRosaAttachment
-  
-  VpcRosaTGWRoutePrivate3:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId: { "Fn::ImportValue": "private-rtb-id3-rosa" } # Route table ID for Private Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR # If destination is Bastion VPC CIDR
-      TransitGatewayId: !Ref TGW # Then route to TGW
-    DependsOn: VpcRosaAttachment
-  
-  VpcRosaTGWRouteFw3:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId: { "Fn::ImportValue": "fw-rtb-id3-rosa" } # Route table ID for Public Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
-      TransitGatewayId: !Ref TGW # Then route to TGW
-    DependsOn: VpcRosaAttachment
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: { "Fn::ImportValue": "vpc-cidr-rosa" }
+      TransitGatewayId: !Ref TGW
+    DependsOn: VpcBastionAttachment
 
-  VpcRosaTGWRoutePublic3:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId: { "Fn::ImportValue": "natgw-rtb-id3-rosa" } # Route table ID for Public Subnet in ROSA VPC
-      DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
-      TransitGatewayId: !Ref TGW # Then route to TGW
-    DependsOn: VpcRosaAttachment
 
 # ------------------------------------------------------
 # Out put
@@ -397,19 +379,11 @@ Outputs:
     Description: A reference to the created VPC
     Value: !Ref VPC
 
-  PublicSubnets:
-    Description: A list of the public subnets
-    Value: !Join [",", [!Ref PublicSubnet]]
-
-  PrivateSubnets:
-    Description: A list of the private subnets
-    Value: !Join [",", [!Ref PrivateSubnet]]
-
-  PublicSubnet:
+  BastionPublicSubnet:
     Description: A reference to the public subnet
     Value: !Ref PublicSubnet
 
-  PrivateSubnet:
+  BastionPrivateSubnet:
     Description: A reference to the private subnet
     Value: !Ref PrivateSubnet
 

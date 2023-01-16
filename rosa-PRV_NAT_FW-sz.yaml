@@ -1,10 +1,32 @@
 # The following will be deployed with this CF
 # 1. Three subnets for each AZ. (Thins template is for single AZ)
-#    Privarte subnet - NATGW subent - FW (Public) subnet - Internet Gateway
 # 2. AWS firewall deployed with a policy which allow all the domains listed on the ROSA document as prerequistes for egress.
-# 3. one bation server will be deployed on which oc and git command are already installed.
+#        
+# This template will create the following Network Firewall rules
 #
-# you can choose the default IP ranges and the AZs. Please be aware the network will be deployed in Japan as default.
+#    1) singleaz-DomainAllow-RuleGroup  based on ROSA requirments
+#    2) singleaz-SplunkAllow-RuleGroup  based on ROSA requiremnts (Splunk)
+#    3) singleaz-DomainAllow-RuleGroup-For-Application   For test perpose +  RHOAM (based on blocked logs)
+#    4) singleaz-IcmpAlert-RuleGroup    This crates alert when someone uses ICMP ping in VPC.
+#    
+# This deploys following network model
+#   [Private Subnet] => [ NATGW(protected) Subnet] => [ FW Subnet]
+#   The model is based on the following AWS blog post.
+#   https://aws.amazon.com/jp/blogs/networking-and-content-delivery/deployment-models-for-aws-network-firewall/
+# 
+# History 
+# 2023/01/13 yuhkih Remove duplicated Output
+# 2023/01/13 yuhkih add  "catalog.redhat.com" to FW for ?
+# 2023/01/14 yuhkih Added allow domains to setup an EC2 for Let's Encrypt (needed in case you put the EC2 in ROSA VPC)
+#              - "dl.fedoraproject.org"          # Added to setup EC2 for Let's Encrypt
+#              - "mirrors.fedoraproject.org"     # Added to setup EC2 for Let's Encrypt
+#              - "d2lzkl7pfhq30w.cloudfront.net" # Added to setup EC2 for Let's Encrypt
+#              - "epel.mirror.angkasa.id"        # Added to setup EC2 for Let's Encrypt
+#              - "ftp.riken.jp"                  # Added to setup EC2 for Let's Encrypt
+#              - "ftp.iij.ad.jp"                 # Added to setup EC2 for Let's Encrypt
+#              - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
+# 2023/01/14 yuhkih Export Fierwall subnet id and route tabled id
+
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Single AZ network with FW"
@@ -168,7 +190,7 @@ Resources:
                 Resource: !GetAtt RetrieveVpcIdLogGroup.Arn
               - Effect: Allow
                 Action:
-                  - network-firewall:DescribeFirewall 
+                  - network-firewall:DescribeFirewall
                 Resource: "*"
 
   # Retrieve VpceId Lambda Custom Resource:
@@ -227,120 +249,9 @@ Resources:
   FirewallVpceIds:
     Type: Custom::DescribeVpcEndpoints
     Properties:
-      ServiceToken: !GetAtt RetrieveVpceId.Arn  # The name of the Lambda function
+      ServiceToken: !GetAtt RetrieveVpceId.Arn
       Az1: !Ref AvailabilityZone1Selection
       FwArn: !Ref VPCAFirewall
-
-
-  # Still working on this part
-  # https://aws.amazon.com/jp/premiumsupport/knowledge-center/cloudformation-route-table-vpc/
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/cfn-lambda-function-code-cfnresponsemodule.html
-
-  ReplaceDefaultLocalRoute:
-    Type: 'AWS::Lambda::Function'
-    Properties:
-      Handler: index.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn   # I need to add some policy to this role 
-      Runtime: python3.9
-      Timeout: 50
-      Code:
-        ZipFile: |
-            from __future__ import print_function
-            import json
-            import boto3
-            import urllib3
-            import cfnresponse
-
-            SUCCESS = "SUCCESS"
-            FAILED = "FAILED"
-
-            http = urllib3.PoolManager()
-
-            print('Loading function')
-            ec2 = boto3.client('ec2')
-
-            def lambda_handler(event, context):
-                print("Received event: " + json.dumps(event, indent=2))
-                responseData={}
-                try:
-                    if event['RequestType'] == 'Delete':
-                        print("Request Type:",event['RequestType'])
-                        print("Delete Request - No Physical resources to delete")
-                    elif event['RequestType'] == 'Create':
-                        print("Request Type:",event['RequestType'])
-                        VPCIDR=event['ResourceProperties']['ArgVpcCIDR']   # argument 1
-                        FWEP=event['ResourceProperties']['ArgFwEp1']       # argument 2
-                        RTBRTblID=event['ResourceProperties']['ArgRtbId1'] # argument 3
-                       # RouteTableID=get_vpc(VPCID) # this is another function.
-                       # responseData={'RouteTableID':RouteTableID}
-                        NewGatewayId=replace_route(VPCID, VPCIDR,FWEP)
-                        responseData={'NewGatewayId':NewGatewayId}
-                        print("Sending response to custom resource")
-                    elif event['RequestType'] == 'Update':
-                        print("Request Type:",event['RequestType'])
-                        VPCIDR=event['ResourceProperties']['ArgVpcCIDR']   # argument 1
-                        FWEP=event['ResourceProperties']['ArgFwEp1']       # argument 2
-                        RTBRTblID=event['ResourceProperties']['ArgRtbId1'] # argument 3
-                       #  VpcCIDR=get_vpc(VPCIDR)  # this is another function.
-                       #  responseData={'RouteTableID':RouteTableID}
-                        NewGatewayId=replace_route(VPCID, VPCIDR,FWEP)
-                        responseData={'NewGatewayId':NewGatewayId}
-                        print("Sending response to custom resource")
-                    # Success Response
-                    responseStatus = 'SUCCESS'
-                    print("responseStatus: " + responseStatus)
-                    cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, "CustomResourcePhysicalID") # Function NO.3
-                except Exception as e:
-                    # Failed Response
-                    print('Failed to process:', e)
-                    responseStatus = 'FAILURE'
-                    responseData = {'Failure': 'Something bad happened.'}
-                    cfnresponse.send(event, context, cfnresponse.FAILURE, responseData, "CustomResourcePhysicalID")
-
-            # -------------------------------------------------------
-            # def get_vpc(VPCID): 
-            #  https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html
-
-            def replace_route(VPCID, VPCIDR,FWEP): 
-                print(VPCID)
-                print(VPCIDR)
-                print(FWEP)
-
-                print("Replace Route in the Route Table ID...")                
-                response = ec2.replace_route(                   # Return Nothing
-                    DestinationCidrBlock=VPCCIDR,
-                      GatewayId=FWEP,                     
-                      RouteTableId=RTBRTblID,             
-                    )
-
-                # No response so return Tabled ID. Or maybe I should return new GatewayId after getting it again
-                return GatewayId
-            
-            # ------------------------------------------------------
-            # Function No.3
-            # This is sent to CloudFormation Stack as a success meesage
-            def send(event, context, responseStatus, responseData, physicalResourceId=None, noEcho=False):
-                responseUrl = event['ResponseURL']
-                print(responseUrl)
-                responseBody = {'Status': responseStatus,
-                                'Reason': 'See the details in CloudWatch Log Stream: ' + context.log_stream_name,
-                                'PhysicalResourceId': physicalResourceId or context.log_stream_name,
-                                'StackId': event['StackId'],
-                                'RequestId': event['RequestId'],
-                                'LogicalResourceId': event['LogicalResourceId'],
-                                'Data': responseData}
-                json_responseBody = json.dumps(responseBody)
-                print("Response body:\n" + json_responseBody)
-                headers = {
-                    'content-type' : '',
-                    'content-length' : str(len(json_responseBody))
-                }
-                try:
-                    response = http.request('PUT', responseUrl, headers=headers, body=json_responseBody)
-                    print("Status code: " + response.reason)
-                except Exception as e:
-                    print("send(..) failed executing requests.put(..): " + str(e))
-
 
   # AWS Network Firewall:
   # Inspection Firewall Rule Groups:
@@ -456,6 +367,8 @@ Resources:
           Value: !Sub ${EnvironmentName}-Allow-RuleGroup
 
   #  FW prerequistes for additional components
+  #  Github.io
+
   DomainAllowStatefulRuleGroupForApp:
     Type: "AWS::NetworkFirewall::RuleGroup"
     Properties:
@@ -479,22 +392,33 @@ Resources:
               - "api.github.com" # added for GitHub IdP
               - "acme-v02.api.letsencrypt.org" # Added for Let's Encrypt
               - "acme-staging-v02.api.letsencrypt.org" # Added for Let's Encrypt
+              - "dl.fedoraproject.org"          # Added to setup EC2 for Let's Encrypt
+              - "mirrors.fedoraproject.org"     # Added to setup EC2 for Let's Encrypt
+              - "d2lzkl7pfhq30w.cloudfront.net" # Added to setup EC2 for Let's Encrypt
+              - "epel.mirror.angkasa.id"        # Added to setup EC2 for Let's Encrypt
+              - "ftp.riken.jp"                  # Added to setup EC2 for Let's Encrypt
+              - "ftp.iij.ad.jp"                 # Added to setup EC2 for Let's Encrypt
+              - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
               - ".openshiftapps.com"  # For public cluster installation. You can narrow down this domain after installation complete to like ".apps.<cluster name>.<random>.<random>.openshiftapps.com"
-              - "registry-1.docker.io"                  # RHOAM ?
-              - "gcr.io"                                # RHOAM ?         
-              - "smtp.sendgrid.net"                     # RHOAM ?  
-              - "grafana.com"                           # RHOAM ?  
-              - "raw.githubusercontent.com"             # RHOAM ?  
-              - "auth.docker.io"                        # RHOAM ?  
-              - "production.cloudflare.docker.com"      # RHOAM ?  
-              - "codeload.github.com"                   # RHOAM ?  
-              - "objects.githubusercontent.com"         # RHOAM ?
-              - "catalog.redhat.com"                    # CDO?
+              - "registry-1.docker.io"              # RHOAM
+              - "gcr.io"                            # RHOAM
+              - "smtp.sendgrid.net"                 # RHOAM
+              - "grafana.com"                       # RHOAM
+              - "raw.githubusercontent.com"         # RHOAM
+              - "auth.docker.io"                    # RHOAM
+              - "production.cloudflare.docker.com"  # RHOAM
+              - "codeload.github.com"               # RHOAM
+              - "aws.amazon.com"                    # RHOAM
+              - "www.redhat.com"                    # RHOAM
+              - "www.okd.io"                        # RHOAM
+              - "access.redhat.com"                 # RHOAM
+              - "observatorium.api.openshift.com"   # RHOAM
+              - "objects.githubusercontent.com"     # RHOAM
+              - "catalog.redhat.com"                # ? this was logged.
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-DomainAllow-RuleGroup-For-Application
-
 
   # VPCA Firewall Policy:
   EgressFirewallPolicy:
@@ -561,68 +485,6 @@ Resources:
             LogDestination:
               logGroup: !Ref VPCAFirewallLogAlertGroup
 
-
-
-  # --------------------------------------------------------
-  # NATGW Route Tables:
-  NatgwRtb1:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPCA
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-NatgwRouteTable1
-        - Key: NatGwRtbKeyForLambda
-          Value: "true"
-
-  NatgwRtb1DefaultRoute:
-    Type: AWS::EC2::Route
-    DependsOn: VPCAFirewall
-    Properties:
-      DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway
-      RouteTableId: !Ref NatgwRtb1
-
-  NatgwRtb1Association:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref NatgwRtb1
-      SubnetId: !Ref NatgwSubnet1
-
-  # Add New
-  ChangeNatGwLocalRoute:
-    Type: Custom::ChangeDefaultRoute
-    DependsOn: VPCAFirewall
-    Properties:
-      ServiceToken: !GetAtt ReplaceDefaultLocalRoute.Arn  # The name of the Lambda function
-      ArgVpcCIDR: !Ref VpcCIDR                            # VPC CIDR
-      ArgFwEp1: !GetAtt FirewallVpceIds.FwVpceId1         # FW Endpoint ID
-      ArgRtbId1: !Ref NatgwRtb1                            # NATGW ID   
-
-  # --------------------------------------------------------
-  # Firewall Route Tables:
-  FirewallRtb1:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPCA
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-FirewallRouteTable1
-
-  FirewallRtb1DefaultRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref NatGw1 
-      RouteTableId: !Ref FirewallRtb1
-
-  FirewallRtb1Association:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref FirewallRtb1
-      SubnetId: !Ref FirewallSubnet1
-
-  # -------------------------------------------------
   # Private Route Tables:
   PrivateRtb1:
     Type: AWS::EC2::RouteTable
@@ -632,42 +494,86 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-PrivateRouteTable1
 
-  PrivateRtb1DefaultRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: "0.0.0.0/0"
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1  # changed to FW ep
-      RouteTableId: !Ref PrivateRtb1
-
   PrivateRtb1Association:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateRtb1
       SubnetId: !Ref PrivateSubnet1
 
-  # Removed 
-  # Ingress Route Table: 
-  # IngressRtb:
-  #   Type: AWS::EC2::RouteTable
-  #   Properties:
-  #     VpcId: !Ref VPCA
-  #     Tags:
-  #       - Key: Name
-  #        Value: !Sub ${EnvironmentName}-IngressRouteTable
+  PrivateRtb1DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGw1
+      RouteTableId: !Ref PrivateRtb1
 
-  # IngressRtbAssociation:
-  #   Type: AWS::EC2::GatewayRouteTableAssociation
-  #   Properties:
-  #     RouteTableId: !Ref IngressRtb
-  #    GatewayId: !Ref InternetGateway
+  # NATGW Route Tables:
+  NatgwRtb1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPCA
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-NatgwRouteTable1
 
-  # IngressRtbPublicSubnet1Route:
-  #  Type: AWS::EC2::Route
-  #  DependsOn: VPCAFirewall
-  #  Properties:
-  #    DestinationCidrBlock: !Ref NAT1CIDR
-  #    VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
-  #    RouteTableId: !Ref IngressRtb
+  NatgwRtb1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref NatgwRtb1
+      SubnetId: !Ref NatgwSubnet1
+
+  NatgwRtb1DefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPCAFirewall
+    Properties:
+      DestinationCidrBlock: "0.0.0.0/0"
+      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
+      RouteTableId: !Ref NatgwRtb1
+
+  # Firewall Route Tables:
+  FirewallRtb1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPCA
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-FirewallRouteTable1
+
+  FirewallRtb1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref FirewallRtb1
+      SubnetId: !Ref FirewallSubnet1
+
+  FirewallRtb1DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref FirewallRtb1
+
+  # Ingress Route Table:
+  IngressRtb:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPCA
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-IngressRouteTable
+
+  IngressRtbAssociation:
+    Type: AWS::EC2::GatewayRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref IngressRtb
+      GatewayId: !Ref InternetGateway
+
+  IngressRtbPublicSubnet1Route:
+    Type: AWS::EC2::Route
+    DependsOn: VPCAFirewall
+    Properties:
+      DestinationCidrBlock: !Ref NAT1CIDR
+      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
+      RouteTableId: !Ref IngressRtb
 
 Outputs:
   MyStacksRegion:
@@ -683,27 +589,7 @@ Outputs:
     Export:
       Name: vpc-id-rosa
 
-  RosaPrivateSubnetID:
-    Value: !Ref PrivateSubnet1
-    Export:
-      Name: private-subnet-id-rosa
 
-  RosaNatGwSubnetID:
-    Value: !Ref NatgwSubnet1
-    Export:
-      Name: natgw-subnet-id-rosa
-
-  RosaPrivateRouteTableID:
-    Value: !Ref PrivateRtb1
-    Export:
-      Name: private-rtb-id-rosa
-
-  RosaNatGwRouteTableID:
-    Value: !Ref NatgwRtb1
-    Export:
-      Name: natgw-rtb-id-rosa
-
-# add new
   RosaPrivateSubnetID1:
     Value: !Ref PrivateSubnet1
     Export:
@@ -713,6 +599,11 @@ Outputs:
     Value: !Ref NatgwSubnet1
     Export:
       Name: natgw-subnet-id1-rosa
+  
+  RosaFwSubnetID1:
+    Value: !Ref FirewallSubnet1
+    Export:
+      Name: fw-subnet-id1-rosa
 
   RosaPrivateRouteTableID1:
     Value: !Ref PrivateRtb1
@@ -723,3 +614,8 @@ Outputs:
     Value: !Ref NatgwRtb1
     Export:
       Name: natgw-rtb-id1-rosa
+      
+  RosaFwRouteTableID1:
+    Value: !Ref FirewallRtb1
+    Export:
+      Name: fw-rtb-id1-rosa

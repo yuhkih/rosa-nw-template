@@ -75,9 +75,14 @@ aws ec2 create-tags --resources $FwSubnetID1 --tags Key=Name,Value=$ROSA_CLUSTER
 aws ec2 create-tags --resources $FwSubnetID2 --tags Key=Name,Value=$ROSA_CLUSTER_NAME-public  Key=$TAG,Value="shared" Key=kubernetes.io/role/elb,Value="true"
 aws ec2 create-tags --resources $FwSubnetID3 --tags Key=Name,Value=$ROSA_CLUSTER_NAME-public  Key=$TAG,Value="shared" Key=kubernetes.io/role/elb,Value="true"
 
-# Create IAMRole and set them to variables (worked)
+# ------------------------------------------------------
+# Create IAMRole and set them to variables 
+# ------------------------------------------------------
 rosa create account-roles -m auto -y
 
+# ------------------------------------------------------
+# Get Necessary parameter for CLI installation
+# ------------------------------------------------------
 INSTALL_ROLE=`aws iam list-roles | jq -r '.Roles[] | [.RoleName, .Arn] | @csv' | grep ManagedOpenShift-Installer-Role |  awk -F'[,]' '{print $2}' | sed 's/"//g'`
 SUPPORT_ROLE=`aws iam list-roles | jq -r '.Roles[] | [.RoleName, .Arn] | @csv' | grep ManagedOpenShift-Support-Role |  awk -F'[,]' '{print $2}' | sed 's/"//g'`
 CONTROL_PLANE_ROLE=`aws iam list-roles | jq -r '.Roles[] | [.RoleName, .Arn] | @csv' | grep ManagedOpenShift-ControlPlane-Role |  awk -F'[,]' '{print $2}' | sed 's/"//g'`
@@ -88,9 +93,28 @@ echo $INSTALL_ROLE
 "arn:aws:iam::878690059572:role/ManagedOpenShift-Installer-Role"
 
 # ---------------------------
-#  Non STS
+#  Only when Non STS
 # ※ If non-STS. IAM user osdCcsAdmin is needed
+# ---------------------------
 rosa init
+
+# ---------------------------
+#  Check parameters 
+# ---------------------------
+RosaCIDR="10.0.0.0/16"
+
+echo "ClusterName = " $ClusterName
+echo "PrivateSubnetID1 = " $PrivateSubnetID1
+echo "PrivateSubnetID2 = " $PrivateSubnetID2
+echo "PrivateSubnetID3 = " $PrivateSubnetID3
+echo "FwSubnetID1 = " $FwSubnetID1
+echo "FwSubnetID2 = " $FwSubnetID2
+echo "FwSubnetID3 = " $FwSubnetID3
+echo "INSTALL_ROLE = " $INSTALL_ROLE
+echo "SUPPORT_ROLE = "$SUPPORT_ROLE
+echo "CONTROL_PLANE_ROLE = " $CONTROL_PLANE_ROLE
+echo "WORKER_ROLE = " $WORKER_ROLE
+echo "RosaCIDR = " $RosaCIDR
 
 
 # Sample 1 
@@ -101,14 +125,13 @@ rosa create cluster --cluster-name $ClusterName --sts \
   --support-role-arn $SUPPORT_ROLE \
   --controlplane-iam-role $CONTROL_PLANE_ROLE \
   --worker-iam-role $WORKER_ROLE \
-  --multi-az --region ap-northeast-1 --version 4.11.5 --compute-nodes 3 --compute-machine-type m5.xlarge \
+  --multi-az --region ap-northeast-1 --version 4.11.21 --compute-nodes 3 --compute-machine-type m5.xlarge \
   --machine-cidr $RosaCIDR --service-cidr 172.30.0.0/16 --pod-cidr 10.128.0.0/14  --host-prefix 23 \
   --private-link \
-  --subnet-ids $PrivateSubnetID1,$PrivateSubnetID2,$PrivateSubnetID3
+  --subnet-ids $PrivateSubnetID1,$PrivateSubnetID2,$PrivateSubnetID3 \
   -y
 
-# Sample 1-2 (non STS PrivateLink)
-# ROSA installation (Multi AZ privateLink )
+# Sample 1-2 (non STS PrivateLink MultiAZ)
 # This need to be updated arn changes every time. ( Worked )
 rosa create cluster --cluster-name $ClusterName \
   --role-arn $INSTALL_ROLE \
@@ -121,6 +144,19 @@ rosa create cluster --cluster-name $ClusterName \
   --subnet-ids $PrivateSubnetID1,$PrivateSubnetID2,$PrivateSubnetID3 \
   -y 
 
+# Sample 1-3 (STS PrivateLink Single AZ)
+# ROSA installation (Multi AZ privateLink )
+# This need to be updated arn changes every time. ( Worked )
+rosa create cluster --cluster-name $ClusterName \
+  --role-arn $INSTALL_ROLE \
+  --support-role-arn $SUPPORT_ROLE \
+  --controlplane-iam-role $CONTROL_PLANE_ROLE \
+  --worker-iam-role $WORKER_ROLE \
+  --region ap-northeast-1 --version 4.11.5 --compute-nodes 2 --compute-machine-type m5.xlarge \
+  --machine-cidr $RosaCIDR --service-cidr 172.30.0.0/16 --pod-cidr 10.128.0.0/14  --host-prefix 23 \
+  --private-link \
+  --subnet-ids $PrivateSubnetID1 \
+  -y 
 
 
 # Sample 2
@@ -164,7 +200,11 @@ rosa create cluster --cluster-name $ClusterName --sts \
   --subnet-ids $PrivateSubnetID1
   -y
 
+# ------------------------------------------------
+# After "rosa create cluster" 
 # create operator roles and OIDC Provider (Tested OK no intervention needed)
+# ------------------------------------------------
+ClusterName=mycluster
 rosa create operator-roles -y -m auto --cluster $ClusterName
 rosa create oidc-provider -y -m auto --cluster $ClusterName
 
@@ -211,3 +251,18 @@ aws cloudformation list-stacks \
 Sleep 10
 
 
+# ---------------------------
+#  Delete Cluster
+# ---------------------------
+echo "[Log] delete cluster id"
+rosa delete cluster -y -c $ClusterName
+rosa logs uninstall -c $ClusterName --watch
+
+echo "[Log] get cluster id"
+CLUSTER_ID=$(rosa list cluster | grep $ClusterName | awk -F' ' '{print $1}')
+
+# The followings didn't work. need to specify ID like 219fial09eqna3rdl1pi9ss0qmi8blu2
+echo "[Log] delete operator-roles"
+rosa delete operator-roles -y -m auto -c $ClusterName 
+echo "[Log] delete oidc-provider"
+rosa delete oidc-provider  -y -m auto -c $ClusterName

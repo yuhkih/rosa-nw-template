@@ -1,7 +1,12 @@
 #!/bin/bash
 # History
 # 2023/01/15 yuhkih Fixed /home/yuhkih/.ssh to ~/.ssh
+# 2023/01/18 yuhkih Add hwclock command for WSL enviroment to sync time with the host Windows
 
+# Sync clock otherwise AWS CLI will fail
+sudo hwclock --hctosys
+
+# check arguments
 if [ $# != 1 ]; then
    echo "[Error] Specify 1 or 2 as an argument to claim which Terminal"
    echo "[Error] How to use:  double-port-forward.sh 1|2"
@@ -69,11 +74,7 @@ if [ $TERMINAL = "1" ]; then
   echo "[Log] NOTICE: You need to add your VPC to Route53 zone as a related VPC so that you can resolve domain names created by ROSA from this bastion."
 else 
   # Terminal 2
-<<<<<<< HEAD
   echo "[Log] 6-1. Login as Terminal 2 (assuming you already have Terminal 1 session)"
-=======
-  echo "[Log] Login as Terminal 2 (assuming you already have Terminal 1 session)"
->>>>>>> 06c46db00fe04f51287a2eed4d556ce83deb93ad
   ssh-keygen -f ~/.ssh/known_hosts -R "[localhost]:10022"
   ssh -i bastion-key.pem -p 10022 ec2-user@localhost -D 10044
   echo "[Log] NOTICE: You need to add your VPC to Route53 zone as a related VPC so that you can resolve domain names created by ROSA from this bastion."

@@ -5,13 +5,14 @@
 # ------------------------------------------------------
 # History
 # 2023/01/16 yuhkih initial creation
+# 2023/01/17 yuhkih change the file name adding -mz.sh.  Redueced the number of default worker nodes to 3 from 6
 
 # ------------------------------------------------------
 # Basic Information
 # ------------------------------------------------------
 ClusterName=mycluster
 RosaCIDR="10.0.0.0/16"
-NumberOfWorkers="6"
+NumberOfWorkers="3"
 
 # ------------------------------------------------------
 # Get ROSA VPC subnetIds

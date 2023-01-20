@@ -27,7 +27,7 @@
 #              - "ftp.iij.ad.jp"                 # Added to setup EC2 for Let's Encrypt
 #              - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
 # 2023/01/14 yuhkih Removed unnecessary export variables like  private-subnet-id-rosa / private-rtb-id-rosa which don't have serial numbers
-# 2023/01/15 yuhkih add Let's Encrypt module installation
+# 2023/01/20 yuhkih Removed SSM bastion related resources because they are now included in rosa-ssm-bastion.yaml
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Multi AZ network with FW"
@@ -328,72 +328,72 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-VpcEnpoint-Sg1
 
-  VPCASSMEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      PrivateDnsEnabled: true
-      SecurityGroupIds:
-        - !Ref VPCAEndpointSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
-      SubnetIds:
-        - !Ref NatgwSubnet1
-        - !Ref NatgwSubnet2
-        - !Ref NatgwSubnet3
-      VpcEndpointType: Interface
-      VpcId: !Ref VPCA
+  # VPCASSMEndpoint:
+  #   Type: AWS::EC2::VPCEndpoint
+  #   Properties:
+  #     PrivateDnsEnabled: true
+  #     SecurityGroupIds:
+  #       - !Ref VPCAEndpointSecurityGroup
+  #     ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+  #     SubnetIds:
+  #       - !Ref NatgwSubnet1
+  #       - !Ref NatgwSubnet2
+  #       - !Ref NatgwSubnet3
+  #     VpcEndpointType: Interface
+  #     VpcId: !Ref VPCA
 
-  VPCAEC2MessagesEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      PrivateDnsEnabled: true
-      SecurityGroupIds:
-        - !Ref VPCAEndpointSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
-      SubnetIds:
-        - !Ref NatgwSubnet1
-        - !Ref NatgwSubnet2
-        - !Ref NatgwSubnet3
-      VpcEndpointType: Interface
-      VpcId: !Ref VPCA
+  # VPCAEC2MessagesEndpoint:
+  #   Type: AWS::EC2::VPCEndpoint
+  #   Properties:
+  #     PrivateDnsEnabled: true
+  #     SecurityGroupIds:
+  #       - !Ref VPCAEndpointSecurityGroup
+  #     ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
+  #     SubnetIds:
+  #       - !Ref NatgwSubnet1
+  #       - !Ref NatgwSubnet2
+  #       - !Ref NatgwSubnet3
+  #     VpcEndpointType: Interface
+  #     VpcId: !Ref VPCA
 
-  VPCASSMMessagesEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      PrivateDnsEnabled: true
-      SecurityGroupIds:
-        - !Ref VPCAEndpointSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
-      SubnetIds:
-        - !Ref NatgwSubnet1
-        - !Ref NatgwSubnet2
-        - !Ref NatgwSubnet3
-      VpcEndpointType: Interface
-      VpcId: !Ref VPCA
+  # VPCASSMMessagesEndpoint:
+  #   Type: AWS::EC2::VPCEndpoint
+  #   Properties:
+  #     PrivateDnsEnabled: true
+  #     SecurityGroupIds:
+  #       - !Ref VPCAEndpointSecurityGroup
+  #     ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+  #     SubnetIds:
+  #       - !Ref NatgwSubnet1
+  #       - !Ref NatgwSubnet2
+  #       - !Ref NatgwSubnet3
+  #     VpcEndpointType: Interface
+  #     VpcId: !Ref VPCA
 
   # SSM Role:
-  SubnetRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub "SSMRole-${EnvironmentName}-${AWS::Region}"
-      Path: "/"
-      ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - ec2.amazonaws.com
-            Action:
-              - sts:AssumeRole
+  # SubnetRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     RoleName: !Sub "SSMRole-${EnvironmentName}-${AWS::Region}"
+  #     Path: "/"
+  #     ManagedPolicyArns:
+  #       - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
+  #     AssumeRolePolicyDocument:
+  #       Version: "2012-10-17"
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service:
+  #               - ec2.amazonaws.com
+  #           Action:
+  #             - sts:AssumeRole
 
-  SubnetInstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Path: "/"
-      Roles:
-        - !Ref SubnetRole
+  # SubnetInstanceProfile:
+  #   Type: AWS::IAM::InstanceProfile
+  #   Properties:
+  #     Path: "/"
+  #     Roles:
+  #       - !Ref SubnetRole
 
   # Fn::GetAtt for Firewall do not return VPCE Id in ordered format.
   # For more details refer to: https://github.com/aws-cloudformation/aws-cloudformation-resource-providers-networkfirewall/issues/15

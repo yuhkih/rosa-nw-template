@@ -5,6 +5,7 @@
 # ------------------------------------------------------
 # History
 # 2023/01/17 yuhkih initial creation based on Multi AZ shell
+# 2023/01/20 yuhkih added confirmation (y/n)
 
 # ------------------------------------------------------
 # Basic Information
@@ -55,10 +56,9 @@ echo "RosaCIDR = " $RosaCIDR
 echo "NumberOfWorkers = "$NumberOfWorkers
 echo "=============================================================="
 
-echo "Wait for 10 seconds"
-echo "[NOTICE!] If there is any unset parameter, that means something is wrong. Quit within 10 seconds by pressing Ctrl + C"
-echo "[NOTICE!] If every parameter has a value. Wait for a moment. The cluster installation will start soon "
-sleep 20
+echo "[Log] Last confirmationk"
+read -p "Are you ok with above parameters? (y/N): " yn
+case "$yn" in [yY]*) ;; *) echo "abort." ; exit ;; esac
 
 # ---------------------------------------
 #  Create ROSA cluster (Single AZ)

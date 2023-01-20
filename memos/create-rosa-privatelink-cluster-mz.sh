@@ -6,6 +6,8 @@
 # History
 # 2023/01/16 yuhkih initial creation
 # 2023/01/17 yuhkih change the file name adding -mz.sh.  Redueced the number of default worker nodes to 3 from 6
+# 2023/01/20 yuhkih removed -sts flag because it's default now (and got warning as an unnecessary flag)
+# 2023/01/20 yuhkih added confirmation (y/n)
 
 # ------------------------------------------------------
 # Basic Information
@@ -56,17 +58,17 @@ echo "RosaCIDR = " $RosaCIDR
 echo "NumberOfWorkers = "$NumberOfWorkers
 echo "=============================================================="
 
-echo "Wait for 10 seconds"
-echo "[NOTICE!] If there is any unset parameter, that means something is wrong. Quit within 10 seconds by pressing Ctrl + C"
-echo "[NOTICE!] If every parameter has a value. Wait for a moment. The cluster installation will start soon "
-sleep 20
+echo "[Log] Last confirmationk"
+
+read -p "Are you ok with above parameters? (y/N): " yn
+case "$yn" in [yY]*) ;; *) echo "abort." ; exit ;; esac
 
 # ---------------------------------------
 #  Create ROSA cluster (Multi AZ)
 # ---------------------------------------
 echo "=============================================================="
 echo "[log] run rosa create cluster"
-rosa create cluster --cluster-name $ClusterName --sts \
+rosa create cluster --cluster-name $ClusterName \
   --role-arn $INSTALL_ROLE \
   --support-role-arn $SUPPORT_ROLE \
   --controlplane-iam-role $CONTROL_PLANE_ROLE \

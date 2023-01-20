@@ -135,6 +135,7 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-TestInstance-Sg1
 
+
   # Create SSH Key (SSM Bastion doesn't need SSH because it allows to login in from AWS console. This is addedd just for convenience)
   NewKeyPair:
     Type: "AWS::EC2::KeyPair"

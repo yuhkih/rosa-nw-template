@@ -1,7 +1,7 @@
 # The following will be deployed with this CF
 # 1. Three subnets for each AZ. (Thins template is for single AZ)
 # 2. AWS firewall deployed with a policy which allow all the domains listed on the ROSA document as prerequistes for egress.
-#        
+#
 # This template will create the following Network Firewall rules
 #
 #    1) singleaz-DomainAllow-RuleGroup  based on ROSA requirments
@@ -10,13 +10,19 @@
 #    4) singleaz-IcmpAlert-RuleGroup    This crates alert when someone uses ICMP ping in VPC.
 #    
 # This deploys following network model
-#   [Private Subnet] => [ NATGW(protected) Subnet] => [ FW Subnet]
+#   [Private Subnet] => [ FW Subnet] => [ NATGW(protected) Subnet] 
 #   The model is based on the following AWS blog post.
-#   https://aws.amazon.com/jp/blogs/networking-and-content-delivery/deployment-models-for-aws-network-firewall/
-# 
+#   https://aws.amazon.com/jp/blogs/networking-and-content-delivery/deployment-models-for-aws-network-firewall-with-vpc-routing-enhancements/
+#
+#   [Notice!!!] This template can't rewrite default route entry of Natgateway subent "10.0.0.0/16   local " 
+#               So, you need to change the entry after delploying this template like below.
+#                Destionation    Target              Destination      Target
+#               "10.0.0.0/16     local "   =====>   "10.0.0.0/16      fiewall-endpoint-id
+#  
 # History 
 # 2023/01/13 yuhkih Remove duplicated Output
 # 2023/01/13 yuhkih add  "catalog.redhat.com" to FW for ?
+# 2023/01/14 yuhkih Delete Ingress route table and make the order Private -> Firewall -> NatGw (Still you need to change NATGW route table manually) 
 # 2023/01/14 yuhkih Added allow domains to setup an EC2 for Let's Encrypt (needed in case you put the EC2 in ROSA VPC)
 #              - "dl.fedoraproject.org"          # Added to setup EC2 for Let's Encrypt
 #              - "mirrors.fedoraproject.org"     # Added to setup EC2 for Let's Encrypt
@@ -26,7 +32,6 @@
 #              - "ftp.iij.ad.jp"                 # Added to setup EC2 for Let's Encrypt
 #              - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
 # 2023/01/14 yuhkih Export Fierwall subnet id and route tabled id
-# 2023/01/20 yuhkih Removed SSM bastion related resources because they are now included in rosa-ssm-bastion.yaml (actually already removed but mz version was not. )
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Single AZ network with FW"
@@ -253,6 +258,140 @@ Resources:
       Az1: !Ref AvailabilityZone1Selection
       FwArn: !Ref VPCAFirewall
 
+  # Still working on this part
+  # https://aws.amazon.com/jp/premiumsupport/knowledge-center/cloudformation-route-table-vpc/
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/cfn-lambda-function-code-cfnresponsemodule.html
+
+  ReplaceDefaultLocalRoute:
+    Type: 'AWS::Lambda::Function'
+    DependsOn: RetrieveVpcIdLogGroup  # 再利用
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn   # I need to add some policy to this role 
+      Runtime: python3.9
+      Timeout: 50
+      Code:
+        ZipFile: |
+            from __future__ import print_function
+            import json
+            import boto3
+            import urllib3
+            import cfnresponse
+
+            SUCCESS = "SUCCESS"
+            FAILED = "FAILED"
+
+            http = urllib3.PoolManager()
+
+            print('Loading function')
+            ec2 = boto3.client('ec2')
+
+            def lambda_handler(event, context):
+                print("Received event: " + json.dumps(event, indent=2))
+                responseData={}
+                try:
+                    if event['RequestType'] == 'Delete':
+
+                        print("Request Type:",event['RequestType'])
+                        print("Delete Request - No Physical resources to delete")
+
+                    elif event['RequestType'] == 'Create':
+
+                        print("Request Type:",event['RequestType'])
+                        VPCIDR=event['ResourceProperties']['ArgVpcCIDR']   # argument 1
+                        FWEP=event['ResourceProperties']['ArgFwEp1']       # argument 2
+                        RTBRTblID=event['ResourceProperties']['ArgRtbId1'] # argument 3
+                       # RouteTableID=get_vpc(VPCID) # this is another function.
+                       # responseData={'RouteTableID':RouteTableID}
+                        NewGatewayId=replace_route(VPCID, VPCIDR,FWEP)
+                        responseData={'NewGatewayId':NewGatewayId}
+                        print("Sending response to custom resource")
+
+                    elif event['RequestType'] == 'Update':
+
+                        print("Request Type:",event['RequestType'])
+                        VPCIDR=event['ResourceProperties']['ArgVpcCIDR']   # argument 1
+                        FWEP=event['ResourceProperties']['ArgFwEp1']       # argument 2
+                        RTBRTblID=event['ResourceProperties']['ArgRtbId1'] # argument 3
+                       #  VpcCIDR=get_vpc(VPCIDR)  # this is another function.
+                       #  responseData={'RouteTableID':RouteTableID}
+                        NewGatewayId=replace_route(VPCID, VPCIDR,FWEP)
+                        responseData={'NewGatewayId':NewGatewayId}
+                        print("Sending response to custom resource")
+
+                    # Success Response
+                    responseStatus = 'SUCCESS'
+                    print("responseStatus: " + responseStatus)
+                    cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, "CustomResourcePhysicalID") # Function NO.3
+                except Exception as e:
+                    # Failed Response
+                    print('Failed to process:', e)
+                    responseStatus = 'FAILURE'
+                    responseData = {'Failure': 'Something bad happened.'}
+                    cfnresponse.send(event, context, cfnresponse.FAILURE, responseData, "CustomResourcePhysicalID")
+                    logger.info('route replace failure: {}'.format(e))
+            # -------------------------------------------------------
+            # def get_vpc(VPCID): 
+            #  https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html
+
+            def replace_route(VPCID, VPCIDR,FWEP): 
+                print(VPCID)
+                print(VPCIDR)
+                print(FWEP)
+
+                print("Replace Route in the Route Table ID...")     
+
+                try :         
+                  response = ec2.replace_route(                   # Return Nothing
+                      DestinationCidrBlock=VPCCIDR,
+                        GatewayId=FWEP,                     
+                        RouteTableId=RTBRTblID,             
+                      )
+
+                except Exception as e:
+                    logger.info('ec2.replace_route failure: {}'.format(e))
+
+                # No response so return Tabled ID. Or maybe I should return new GatewayId after getting it again
+                return GatewayId
+            
+            # ------------------------------------------------------
+            # Function No.3
+            # This is sent to CloudFormation Stack as a success meesage
+            def send(event, context, responseStatus, responseData, physicalResourceId=None, noEcho=False):
+
+                responseUrl = event['ResponseURL']
+                print(responseUrl)
+                responseBody = {'Status': responseStatus,
+                                'Reason': 'See the details in CloudWatch Log Stream: ' + context.log_stream_name,
+                                'PhysicalResourceId': physicalResourceId or context.log_stream_name,
+                                'StackId': event['StackId'],
+                                'RequestId': event['RequestId'],
+                                'LogicalResourceId': event['LogicalResourceId'],
+                                'Data': responseData}
+                json_responseBody = json.dumps(responseBody)
+                print("Response body:\n" + json_responseBody)
+                headers = {
+                    'content-type' : '',
+                    'content-length' : str(len(json_responseBody))
+                }
+                try:
+                    response = http.request('PUT', responseUrl, headers=headers, body=json_responseBody)
+                    print("Status code: " + response.reason)
+                except Exception as e:
+                    print("send(..) failed executing requests.put(..): " + str(e))
+                    logger.info('http.request failure: {}'.format(e))
+
+ # Add New
+  ChangeNatGwLocalRoute:
+    Type: Custom::ChangeDefaultRoute
+    DependsOn: VPCAFirewall
+    Properties:
+      ServiceToken: !GetAtt ReplaceDefaultLocalRoute.Arn  # The name of the Lambda function
+      ArgVpcCIDR: !Ref VpcCIDR                            # VPC CIDR
+      ArgFwEp1: !GetAtt FirewallVpceIds.FwVpceId1         # FW Endpoint ID
+      ArgRtbId1: !Ref NatgwRtb1                            # NATGW ID   
+
+
   # AWS Network Firewall:
   # Inspection Firewall Rule Groups:
   ICMPAlertStatefulRuleGroup:
@@ -414,8 +553,7 @@ Resources:
               - "access.redhat.com"                 # RHOAM
               - "observatorium.api.openshift.com"   # RHOAM
               - "objects.githubusercontent.com"     # RHOAM
-              - "catalog.redhat.com"                # ? this was logged.
-              - "echo-api.3scale.net"               # RHOAM
+              - "catalog.redhat.com"                    # This was logged
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name
@@ -505,8 +643,30 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref NatGw1
+      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
       RouteTableId: !Ref PrivateRtb1
+
+  # Firewall Route Tables:
+  FirewallRtb1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPCA
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-FirewallRouteTable1
+
+  FirewallRtb1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref FirewallRtb1
+      SubnetId: !Ref FirewallSubnet1
+
+  FirewallRtb1DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGw1
+      RouteTableId: !Ref FirewallRtb1
 
   # NATGW Route Tables:
   NatgwRtb1:
@@ -528,53 +688,8 @@ Resources:
     DependsOn: VPCAFirewall
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
+      GatewayId: !Ref InternetGateway 
       RouteTableId: !Ref NatgwRtb1
-
-  # Firewall Route Tables:
-  FirewallRtb1:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPCA
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-FirewallRouteTable1
-
-  FirewallRtb1Association:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref FirewallRtb1
-      SubnetId: !Ref FirewallSubnet1
-
-  FirewallRtb1DefaultRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway
-      RouteTableId: !Ref FirewallRtb1
-
-  # Ingress Route Table:
-  IngressRtb:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPCA
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-IngressRouteTable
-
-  IngressRtbAssociation:
-    Type: AWS::EC2::GatewayRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref IngressRtb
-      GatewayId: !Ref InternetGateway
-
-  IngressRtbPublicSubnet1Route:
-    Type: AWS::EC2::Route
-    DependsOn: VPCAFirewall
-    Properties:
-      DestinationCidrBlock: !Ref NAT1CIDR
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
-      RouteTableId: !Ref IngressRtb
 
 Outputs:
   MyStacksRegion:
@@ -615,7 +730,7 @@ Outputs:
     Value: !Ref NatgwRtb1
     Export:
       Name: natgw-rtb-id1-rosa
-      
+
   RosaFwRouteTableID1:
     Value: !Ref FirewallRtb1
     Export:

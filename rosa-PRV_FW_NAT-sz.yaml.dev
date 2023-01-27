@@ -14,10 +14,10 @@
 #   The model is based on the following AWS blog post.
 #   https://aws.amazon.com/jp/blogs/networking-and-content-delivery/deployment-models-for-aws-network-firewall-with-vpc-routing-enhancements/
 #
-#   [Notice!!!] This template can't rewrite default route entry of Natgateway subent "10.0.0.0/16   local " 
+#   [Notice!!!] This template can't rewrite default route entry of Natgateway subent "10.3.0.0/16   local " 
 #               So, you need to change the entry after delploying this template like below.
 #                Destionation    Target              Destination      Target
-#               "10.0.0.0/16     local "   =====>   "10.0.0.0/16      fiewall-endpoint-id
+#               "10.3.0.0/16     local "   =====>   "10.3.0.0/16      fiewall-endpoint-id
 #  
 # History 
 # 2023/01/13 yuhkih Remove duplicated Output
@@ -32,6 +32,7 @@
 #              - "ftp.iij.ad.jp"                 # Added to setup EC2 for Let's Encrypt
 #              - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
 # 2023/01/14 yuhkih Export Fierwall subnet id and route tabled id
+# 2023/01/23 yuhkih Added "cloud.redhat.com" to FW # For cluster upgrading
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Single AZ network with FW"
@@ -53,25 +54,25 @@ Parameters:
   VpcCIDR:
     Description: Please enter the IP range (CIDR notation) for this VPC
     Type: String
-    Default: "10.0.0.0/16"
+    Default: "10.3.0.0/16"
 
   # Private Network
   Private1CIDR:
     Description: Please enter the IP range (CIDR notation) for Private Netwowrk1
     Type: String
-    Default: "10.0.1.0/24"
+    Default: "10.3.1.0/24"
 
   # NATGW Network
   NAT1CIDR:
     Description: Please enter the IP range (CIDR notation) for Public (NAT) Netwowrk1
     Type: String
-    Default: "10.0.0.0/24"
+    Default: "10.3.0.0/24"
 
   # Firewall (Public) Network
   FW1CIDR:
     Description: Please enter the IP range (CIDR notation) for Firewall Netwowrk1
     Type: String
-    Default: "10.0.16.0/28"
+    Default: "10.3.16.0/28"
 
   AvailabilityZone1Selection:
     Description: Availability Zone 1
@@ -197,12 +198,19 @@ Resources:
                 Action:
                   - network-firewall:DescribeFirewall
                 Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ec2:CreateRouteTable
+                  - ec2:CreateTags
+                  - ec2:DeleteTags
+                  - ec2:DescribeRouteTables
+                Resource: "*"
 
   # Retrieve VpceId Lambda Custom Resource:
   RetrieveVpcIdLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/${EnvironmentName}-ROSA/OneTimeLambda/RetrieveVpceId-${AWS::Region}"
+      LogGroupName: !Sub "/FwdemoDev/Lambda/RetrieveVpceId-${AWS::Region}"
       RetentionInDays: 1
 
   RetrieveVpceId:
@@ -214,10 +222,13 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
         ZipFile: |
+          from __future__ import print_function # add
           import boto3
           import cfnresponse
           import json
           import logging
+
+          print("Enter RetriveVpceId")
 
           def handler(event, context):
               logger = logging.getLogger()
@@ -251,145 +262,12 @@ Resources:
       Runtime: python3.7
       Timeout: 30
 
-  FirewallVpceIds:
+  FirewallVpceIds:           # response data of Lambda function
     Type: Custom::DescribeVpcEndpoints
     Properties:
       ServiceToken: !GetAtt RetrieveVpceId.Arn
       Az1: !Ref AvailabilityZone1Selection
       FwArn: !Ref VPCAFirewall
-
-  # Still working on this part
-  # https://aws.amazon.com/jp/premiumsupport/knowledge-center/cloudformation-route-table-vpc/
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/cfn-lambda-function-code-cfnresponsemodule.html
-
-  ReplaceDefaultLocalRoute:
-    Type: 'AWS::Lambda::Function'
-    DependsOn: RetrieveVpcIdLogGroup  # 再利用
-    Properties:
-      Handler: index.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn   # I need to add some policy to this role 
-      Runtime: python3.9
-      Timeout: 50
-      Code:
-        ZipFile: |
-            from __future__ import print_function
-            import json
-            import boto3
-            import urllib3
-            import cfnresponse
-
-            SUCCESS = "SUCCESS"
-            FAILED = "FAILED"
-
-            http = urllib3.PoolManager()
-
-            print('Loading function')
-            ec2 = boto3.client('ec2')
-
-            def lambda_handler(event, context):
-                print("Received event: " + json.dumps(event, indent=2))
-                responseData={}
-                try:
-                    if event['RequestType'] == 'Delete':
-
-                        print("Request Type:",event['RequestType'])
-                        print("Delete Request - No Physical resources to delete")
-
-                    elif event['RequestType'] == 'Create':
-
-                        print("Request Type:",event['RequestType'])
-                        VPCIDR=event['ResourceProperties']['ArgVpcCIDR']   # argument 1
-                        FWEP=event['ResourceProperties']['ArgFwEp1']       # argument 2
-                        RTBRTblID=event['ResourceProperties']['ArgRtbId1'] # argument 3
-                       # RouteTableID=get_vpc(VPCID) # this is another function.
-                       # responseData={'RouteTableID':RouteTableID}
-                        NewGatewayId=replace_route(VPCID, VPCIDR,FWEP)
-                        responseData={'NewGatewayId':NewGatewayId}
-                        print("Sending response to custom resource")
-
-                    elif event['RequestType'] == 'Update':
-
-                        print("Request Type:",event['RequestType'])
-                        VPCIDR=event['ResourceProperties']['ArgVpcCIDR']   # argument 1
-                        FWEP=event['ResourceProperties']['ArgFwEp1']       # argument 2
-                        RTBRTblID=event['ResourceProperties']['ArgRtbId1'] # argument 3
-                       #  VpcCIDR=get_vpc(VPCIDR)  # this is another function.
-                       #  responseData={'RouteTableID':RouteTableID}
-                        NewGatewayId=replace_route(VPCID, VPCIDR,FWEP)
-                        responseData={'NewGatewayId':NewGatewayId}
-                        print("Sending response to custom resource")
-
-                    # Success Response
-                    responseStatus = 'SUCCESS'
-                    print("responseStatus: " + responseStatus)
-                    cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, "CustomResourcePhysicalID") # Function NO.3
-                except Exception as e:
-                    # Failed Response
-                    print('Failed to process:', e)
-                    responseStatus = 'FAILURE'
-                    responseData = {'Failure': 'Something bad happened.'}
-                    cfnresponse.send(event, context, cfnresponse.FAILURE, responseData, "CustomResourcePhysicalID")
-                    logger.info('route replace failure: {}'.format(e))
-            # -------------------------------------------------------
-            # def get_vpc(VPCID): 
-            #  https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html
-
-            def replace_route(VPCID, VPCIDR,FWEP): 
-                print(VPCID)
-                print(VPCIDR)
-                print(FWEP)
-
-                print("Replace Route in the Route Table ID...")     
-
-                try :         
-                  response = ec2.replace_route(                   # Return Nothing
-                      DestinationCidrBlock=VPCCIDR,
-                        GatewayId=FWEP,                     
-                        RouteTableId=RTBRTblID,             
-                      )
-
-                except Exception as e:
-                    logger.info('ec2.replace_route failure: {}'.format(e))
-
-                # No response so return Tabled ID. Or maybe I should return new GatewayId after getting it again
-                return GatewayId
-            
-            # ------------------------------------------------------
-            # Function No.3
-            # This is sent to CloudFormation Stack as a success meesage
-            def send(event, context, responseStatus, responseData, physicalResourceId=None, noEcho=False):
-
-                responseUrl = event['ResponseURL']
-                print(responseUrl)
-                responseBody = {'Status': responseStatus,
-                                'Reason': 'See the details in CloudWatch Log Stream: ' + context.log_stream_name,
-                                'PhysicalResourceId': physicalResourceId or context.log_stream_name,
-                                'StackId': event['StackId'],
-                                'RequestId': event['RequestId'],
-                                'LogicalResourceId': event['LogicalResourceId'],
-                                'Data': responseData}
-                json_responseBody = json.dumps(responseBody)
-                print("Response body:\n" + json_responseBody)
-                headers = {
-                    'content-type' : '',
-                    'content-length' : str(len(json_responseBody))
-                }
-                try:
-                    response = http.request('PUT', responseUrl, headers=headers, body=json_responseBody)
-                    print("Status code: " + response.reason)
-                except Exception as e:
-                    print("send(..) failed executing requests.put(..): " + str(e))
-                    logger.info('http.request failure: {}'.format(e))
-
- # Add New
-  ChangeNatGwLocalRoute:
-    Type: Custom::ChangeDefaultRoute
-    DependsOn: VPCAFirewall
-    Properties:
-      ServiceToken: !GetAtt ReplaceDefaultLocalRoute.Arn  # The name of the Lambda function
-      ArgVpcCIDR: !Ref VpcCIDR                            # VPC CIDR
-      ArgFwEp1: !GetAtt FirewallVpceIds.FwVpceId1         # FW Endpoint ID
-      ArgRtbId1: !Ref NatgwRtb1                            # NATGW ID   
 
 
   # AWS Network Firewall:
@@ -553,7 +431,9 @@ Resources:
               - "access.redhat.com"                 # RHOAM
               - "observatorium.api.openshift.com"   # RHOAM
               - "objects.githubusercontent.com"     # RHOAM
-              - "catalog.redhat.com"                    # This was logged
+              - "catalog.redhat.com"                # This was logged
+              - "echo-api.3scale.net"               # RHOAM
+              - "cloud.redhat.com"                  # For cluster upgrading (Not documented for ROSA)
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name
@@ -690,6 +570,112 @@ Resources:
       DestinationCidrBlock: "0.0.0.0/0"
       GatewayId: !Ref InternetGateway 
       RouteTableId: !Ref NatgwRtb1
+
+
+  # Still working on this part
+  # https://aws.amazon.com/jp/premiumsupport/knowledge-center/cloudformation-route-table-vpc/
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/cfn-lambda-function-code-cfnresponsemodule.html
+
+  ReplaceDefaultLocalRoute:
+    Type: 'AWS::Lambda::Function'
+    DependsOn: RetrieveVpcIdLogGroup  # 再利用
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn   # I need to add some policy to this role 
+      Runtime: python3.7
+      Timeout: 50
+      Code:
+        ZipFile: |
+          from __future__ import print_function
+          import json
+          import boto3
+          import urllib3
+          import cfnresponse
+          import logging
+
+          SUCCESS = "SUCCESS"
+          FAILED = "FAILED"
+
+          http = urllib3.PoolManager()
+
+          print('Loading function')
+          ec2 = boto3.client('ec2')
+
+          def lambda_handler(event, context):
+              print("Received event: " + json.dumps(event, indent=2))
+              responseData={}
+              if event['RequestType'] == 'Delete':
+                responseStatus = cfnresponse.SUCCESS
+                responseData = "Delete-ok"
+                print("Request Type:",event['RequestType'])
+                print("Delete Request - No Physical resources to delete")
+                cfnresponse.send(event, context, responseStatus, responseData)
+
+              try:
+                  if event['RequestType'] == 'Create':
+
+                      print("Request Type:",event['RequestType'])
+                      VPCIDR=event['ResourceProperties']['ArgVpcCIDR']   # argument 1
+                      FWEP=event['ResourceProperties']['ArgFwEp1']       # argument 2
+                      RTBRTblID=event['ResourceProperties']['ArgRtbId1'] # argument 3
+                      NewGatewayId=replace_route(VPCID, VPCIDR,FWEP)  # call function
+                      responseData={'NewGatewayId': NewGatewayId}   
+                      print("Sending response to custom resource")
+
+                  elif event['RequestType'] == 'Update':
+
+                      print("Request Type:",event['RequestType'])
+                      VPCIDR=event['ResourceProperties']['ArgVpcCIDR']   # argument 1
+                      FWEP=event['ResourceProperties']['ArgFwEp1']       # argument 2
+                      RTBRTblID=event['ResourceProperties']['ArgRtbId1'] # argument 3
+                      NewGatewayId=replace_route(VPCID, VPCIDR,FWEP)   # call function
+                      responseData={'NewGatewayId': NewGatewayId}
+                      print("Sending response to custom resource")
+
+                  # Success Response
+                  responseStatus = 'SUCCESS'
+                  print("responseStatus: " + responseStatus)
+                  cfnresponse.send(event, context, responseStatus, responseData)
+
+              except Exception as e:
+                  # Failed Response
+                  print('Failed to process:', e)
+                  responseStatus = 'FAILURE'
+                  responseData = {'Failure': 'Something bad happened.'}
+                  logger.info('route replace failure: {}'.format(e))
+                  cfnresponse.send(event, context, responseStatus, responseData)
+
+          # -------------------------------------------------------
+          # def get_vpc(VPCID): 
+          #  https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html
+
+          def replace_route(VPCID, VPCIDR,FWEP): 
+              print(VPCID)
+              print(VPCIDR)
+              print(FWEP)
+
+              print("Replace Route in the Route Table ID...")     
+    
+              #  response = ec2.replace_route(                   # Return Nothing
+              #      DestinationCidrBlock=VPCCIDR,
+              #        GatewayId=FWEP,                     
+              #        RouteTableId=RTBRTblID,             
+              #      )
+              
+              return VPCID
+
+            
+ # Add New
+  ChangeNatGwLocalRoute:      # response data of Lambda function. Not refered by any part. Just modify the route table
+    Type: Custom::ChangeDefaultRoute
+    DependsOn: VPCAFirewall
+    Properties:
+      ServiceToken: !GetAtt ReplaceDefaultLocalRoute.Arn  # The name of the Lambda function
+      ArgVpcCIDR: !Ref VpcCIDR                            # VPC CIDR
+      ArgFwEp1: !GetAtt FirewallVpceIds.FwVpceId1         # FW Endpoint ID
+      ArgRtbId1: !Ref NatgwRtb1                            # NATGW ID   
+
+
 
 Outputs:
   MyStacksRegion:

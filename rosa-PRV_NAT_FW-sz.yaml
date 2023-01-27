@@ -27,6 +27,7 @@
 #              - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
 # 2023/01/14 yuhkih Export Fierwall subnet id and route tabled id
 # 2023/01/20 yuhkih Removed SSM bastion related resources because they are now included in rosa-ssm-bastion.yaml (actually already removed but mz version was not. )
+# 2023/01/23 yuhkih Added "cloud.redhat.com" to FW # For cluster upgrading
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Single AZ network with FW"
@@ -416,6 +417,7 @@ Resources:
               - "objects.githubusercontent.com"     # RHOAM
               - "catalog.redhat.com"                # ? this was logged.
               - "echo-api.3scale.net"               # RHOAM
+              - "cloud.redhat.com"                  # For cluster upgrading
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name

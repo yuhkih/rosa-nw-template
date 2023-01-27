@@ -8,6 +8,7 @@
 # 2023/01/17 yuhkih change the file name adding -mz.sh.  Redueced the number of default worker nodes to 3 from 6
 # 2023/01/20 yuhkih removed -sts flag because it's default now (and got warning as an unnecessary flag)
 # 2023/01/20 yuhkih added confirmation (y/n)
+# 2023/01/27 yuhkih added --sts (sts is not default yet)
 
 # ------------------------------------------------------
 # Basic Information
@@ -59,7 +60,6 @@ echo "NumberOfWorkers = "$NumberOfWorkers
 echo "=============================================================="
 
 echo "[Log] Last confirmationk"
-
 read -p "Are you ok with above parameters? (y/N): " yn
 case "$yn" in [yY]*) ;; *) echo "abort." ; exit ;; esac
 
@@ -68,7 +68,7 @@ case "$yn" in [yY]*) ;; *) echo "abort." ; exit ;; esac
 # ---------------------------------------
 echo "=============================================================="
 echo "[log] run rosa create cluster"
-rosa create cluster --cluster-name $ClusterName \
+rosa create cluster --cluster-name $ClusterName --sts \
   --role-arn $INSTALL_ROLE \
   --support-role-arn $SUPPORT_ROLE \
   --controlplane-iam-role $CONTROL_PLANE_ROLE \

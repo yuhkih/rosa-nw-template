@@ -28,6 +28,7 @@
 #              - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
 # 2023/01/14 yuhkih Removed unnecessary export variables like  private-subnet-id-rosa / private-rtb-id-rosa which don't have serial numbers
 # 2023/01/20 yuhkih Removed SSM bastion related resources because they are now included in rosa-ssm-bastion.yaml
+# 2023/01/23 yuhkih Added "cloud.redhat.com" to FW # For cluster upgrading
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Multi AZ network with FW"
@@ -656,6 +657,8 @@ Resources:
               - "observatorium.api.openshift.com"   # RHOAM
               - "objects.githubusercontent.com"     # RHOAM
               - "catalog.redhat.com"                # ?
+              - "echo-api.3scale.net"               # RHOAM
+              - "cloud.redhat.com"                  # For cluster upgrading (Not documented for ROSA)
             GeneratedRulesType: "ALLOWLIST"         
 
       Tags:

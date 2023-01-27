@@ -561,8 +561,6 @@ Resources:
             LogDestination:
               logGroup: !Ref VPCAFirewallLogAlertGroup
 
-
-
   # --------------------------------------------------------
   # NATGW Route Tables:
   NatgwRtb1:

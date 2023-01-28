@@ -7,6 +7,13 @@
 # 2023/01/17 yuhkih initial creation based on Multi AZ shell
 # 2023/01/20 yuhkih added confirmation (y/n)
 # 2023/01/27 yuhkih added --sts (sts is not default yet)
+# 2023/01/20 yuhkih added confirmation (y/n)
+# 2023/01/28 yuhkih added time adjustment for WSL environment
+
+# ------------------------------------------------------
+# Adjust time for WSL 
+# ------------------------------------------------------
+sudo hwclock --hctosys
 
 # ------------------------------------------------------
 # Basic Information

@@ -422,7 +422,7 @@ Resources:
               - "objects.githubusercontent.com"     # RHOAM
               - "catalog.redhat.com"                    # This was logged
               - "echo-api.3scale.net"               # RHOAM
-              - "cloud.redhat.com"                  # For cluster upgrading
+              - "cloud.redhat.com"                  # For cluster upgrading (Not documented for ROSA)
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name

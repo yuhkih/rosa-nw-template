@@ -28,6 +28,7 @@
 # 2023/01/14 yuhkih Export Fierwall subnet id and route tabled id
 # 2023/01/20 yuhkih Removed SSM bastion related resources because they are now included in rosa-ssm-bastion.yaml (actually already removed but mz version was not. )
 # 2023/01/23 yuhkih Added "cloud.redhat.com" to FW # For cluster upgrading
+# 2023/02/04 yuhkin Added "stats.grafana.org"     # RHOAM ?
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Single AZ network with FW"
@@ -415,9 +416,10 @@ Resources:
               - "access.redhat.com"                 # RHOAM
               - "observatorium.api.openshift.com"   # RHOAM
               - "objects.githubusercontent.com"     # RHOAM
-              - "catalog.redhat.com"                # ? this was logged.
+              - "catalog.redhat.com"                # ? this was logged. Operator installation? (So, ROSA?)
               - "echo-api.3scale.net"               # RHOAM
-              - "cloud.redhat.com"                  # For cluster upgrading
+              - "cloud.redhat.com"                  # For cluster upgrading (Not documented for ROSA)
+              - "stats.grafana.org"                 # RHOAM ?
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name

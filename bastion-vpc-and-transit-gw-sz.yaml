@@ -7,6 +7,7 @@
 # 2023/01/14 yuhkih private-subnet-id-rosa　=> private-subnet-id1-rosa
 # 2023/01/14 yuhkih add "set -o vi"
 # 2023/01/15 yuhkih add chmod 444 /tmp/ec2-install.log
+# 2023/01/30 yuhkih add Helm installation to the bastion2
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Bastion VPC (prublic / private subnet ) which has a bation server in each subnet and Transit Gateway to a specifed VPC"
@@ -285,6 +286,9 @@ Resources:
           sudo rpm -Uvh dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-*.rpm
           sudo amazon-linux-extras install epel -y
           sudo yum install -y certbot python2-certbot-apache 
+          curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          chmod 700 get_helm.sh
+          ./get_helm.sh
 
   # ---------------------------------------------------------------------
   #  Transit Gateway

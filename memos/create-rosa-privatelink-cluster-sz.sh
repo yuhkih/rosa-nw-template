@@ -20,7 +20,7 @@ sudo hwclock --hctosys
 # ------------------------------------------------------
 ClusterName=mycluster
 RosaCIDR="10.0.0.0/16"
-NumberOfWorkers="2"
+NumberOfWorkers="4"
 RosaVersion="4.10.47"
 # RosaVersion="4.12"
 

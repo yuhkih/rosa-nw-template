@@ -659,6 +659,7 @@ Resources:
               - "catalog.redhat.com"                # ?
               - "echo-api.3scale.net"               # RHOAM
               - "cloud.redhat.com"                  # For cluster upgrading (Not documented for ROSA)
+              - "stats.grafana.org"                 # RHOAM ?
             GeneratedRulesType: "ALLOWLIST"         
 
       Tags:

@@ -266,3 +266,34 @@ echo "[Log] delete operator-roles"
 rosa delete operator-roles -y -m auto -c $ClusterName 
 echo "[Log] delete oidc-provider"
 rosa delete oidc-provider  -y -m auto -c $ClusterName
+
+
+# Intall RHOAM
+# Create Policy for support
+aws iam put-role-policy --role-name ManagedOpenShift-Support-Role --policy-name rhoam-sre-support-policy --policy-document "file://rhoam-sre-support-policy.json"
+
+# Custom Domain RHOAM
+EMAIL=test@example.com
+ rosa install addon --cluster mycluster managed-api-service -y --rosa-cli-required true --cidr-range 10.1.0.0/26 --notification-email $EMAIL --addon-managed-api-service 1 --addon-resource-required true --custom-domain_domain ocp4.work --billing-model standard
+
+# Standard RHOAM
+EMAIL=test@example.com
+rosa install addon --cluster mycluster managed-api-service -y --rosa-cli-required true --cidr-range 10.1.0.0/26 --notification-email $EMAIL --addon-managed-api-service 1 --addon-resource-required true  --billing-model standard
+
+# check the progress
+rosa list addons -c mycluster | grep managed-api-service
+
+# Delete RHOAM 
+rosa list addons -c mycluster  # check add-on status like "Not installed" or "deleting" / "installing"
+
+# GitHub IdP
+ClusterName=mycluster
+rosa create idp --type=github --cluster=$ClusterName
+? Restrict to members of: organizations
+? GitHub organizations: ocp-test1
+...
+
+# add dedicated-admin permissions to a github user
+ClusterName=mycluster
+rosa grant user dedicated-admin --user=yuhkih --cluster=$ClusterName
+rosa list users --cluster=$ClusterName

@@ -274,7 +274,7 @@ aws iam put-role-policy --role-name ManagedOpenShift-Support-Role --policy-name 
 
 # Custom Domain RHOAM
 EMAIL=test@example.com
- rosa install addon --cluster mycluster managed-api-service -y --rosa-cli-required true --cidr-range 10.1.0.0/26 --notification-email $EMAIL --addon-managed-api-service 1 --addon-resource-required true --custom-domain_domain ocp4.work --billing-model standard
+rosa install addon --cluster mycluster managed-api-service -y --rosa-cli-required true --cidr-range 10.1.0.0/26 --notification-email $EMAIL --addon-managed-api-service 1 --addon-resource-required true --custom-domain_domain ocp4.work --billing-model standard
 
 # Standard RHOAM
 EMAIL=test@example.com

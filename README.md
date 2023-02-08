@@ -35,7 +35,7 @@ jq コマンドは Ubuntu の場合は、
  sudo apt-get install jq
  ```
 
-RHEL系 (Amazon Linux等)の場合は、
+RHEL系 (Amazon Linux等) の場合は、
 ```
  sudo yum install jq
 ```

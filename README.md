@@ -1,5 +1,5 @@
 
-# 作業環境
+# 作業環境のセットアップ
 
 以下の環境をセットアップされている環境を前提としています。
 
@@ -41,6 +41,16 @@ RHEL系 (Amazon Linux等) の場合は、
 ```
 でインストール可能です。
 
+# この Repository のクローン
+
+自分の端末上で以下のコマンドを実行して、このレポジトリーをローカルにダウンロードします。
+
+```
+git clone https://g]ithub.com/yuhkih/rosa-nw-template.git
+cd rosa-nw-template
+```
+
+作業に必要な CloudFormation の Template や、sh 等は `rosa-nw-template` ディレクトリに含まれています。
 
 # ROSA/RHOAM 用のNetwork のデプロイ
 

@@ -30,7 +30,7 @@
 
 # PrivateLink を使用した RHOAM 用 ROSA Cluster のインストール
 
-1. CloudFormation の画面で、作成したスタックを選択し「出力」のタブに行くと以下のように Private Subnet の ID が表示されているはずです。PrivateLink を使ったインストールには、インストール時にこの IDの値を聞かれるのでメモしておきます。
+1. CloudFormation の画面で、作成したスタックを選択し「出力」のタブに行くと以下のように Private Subnet の ID が表示されているはずです。PrivateLink を使ったインストールには、インストール時にこの IDの値を聞かれるのでメモしておきます。(Single AZ の Network を CloudFormation でデプロイした場合は、PrivateSubnetID1 のみ存在します。)
 
     ```
     PrivateSubnetID1 subnet-098e7998da1721a95 Private Subnet ID1
@@ -173,11 +173,25 @@
 
 
 1. 以下の CloudFormation のテンプレートを使用してスタックを作成します。
+
+    Single AZ の　ROSA をデプロイした場合
+
+   ```
+    bastion-vpc-and-transit-gw-sz.yaml
+    ```
+
+    Multi AZ の ROSA をデプロイした場合
+
     ```
     bastion-vpc-and-transit-gw-mz.yaml
     ```
+
     この CloudFormation Template によって、Bastion 用の VPCとTransit Gateway が構成されます。
     PrivateLink の場合は、ROSA のドメインは、ROSA の VPCからのみ解決できるようになっています。
+
+    Single AZ 構成の場合は以下の図のような環境が構築されます。
+
+    ![Single AZ Network + Bastion ](/images/bastion-vpc-transit-gateway.png) 
 
 1. ROSA の VPC の Route 53 の 設定を編集します。
 

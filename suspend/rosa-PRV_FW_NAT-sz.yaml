@@ -1,22 +1,28 @@
 # The following will be deployed with this CF
 # 1. Three subnets for each AZ. (Thins template is for single AZ)
 # 2. AWS firewall deployed with a policy which allow all the domains listed on the ROSA document as prerequistes for egress.
-#        
+#
 # This template will create the following Network Firewall rules
 #
-#    1) singleaz-DomainAllow-RuleGroup  based on ROSA requirments
-#    2) singleaz-SplunkAllow-RuleGroup  based on ROSA requiremnts (Splunk)
-#    3) singleaz-DomainAllow-RuleGroup-For-Application   For test perpose +  RHOAM (based on blocked logs)
-#    4) singleaz-IcmpAlert-RuleGroup    This crates alert when someone uses ICMP ping in VPC.
+#    1) {EnvironmentName}-DomainAllow-RuleGroup  based on ROSA requirments
+#    2) {EnvironmentName}-ROSA-IP-Allow-RuleGroup  based on ROSA requiremnts (Splunk)
+#    3) {EnvironmentName}-DomainAllow-RuleGroup-For-Application   For test perpose +  RHOAM (based on blocked logs)
+#    4) {EnvironmentName}-IcmpAlert-RuleGroup    This crates alert when someone uses ICMP ping in VPC.
 #    
 # This deploys following network model
-#   [Private Subnet] => [ NATGW(protected) Subnet] => [ FW Subnet]
+#   [Private Subnet] => [ FW Subnet] => [ NATGW(protected) Subnet] 
 #   The model is based on the following AWS blog post.
-#   https://aws.amazon.com/jp/blogs/networking-and-content-delivery/deployment-models-for-aws-network-firewall/
-# 
+#   https://aws.amazon.com/jp/blogs/networking-and-content-delivery/deployment-models-for-aws-network-firewall-with-vpc-routing-enhancements/
+#
+#   [Notice!!!] This template can't rewrite default route entry of Natgateway subent "10.0.0.0/16   local " 
+#               So, you need to change the entry after delploying this template like below.
+#                Destionation    Target              Destination      Target
+#               "10.0.0.0/16     local "   =====>   "10.0.0.0/16      fiewall-endpoint-id
+#  
 # History 
 # 2023/01/13 yuhkih Remove duplicated Output
 # 2023/01/13 yuhkih add  "catalog.redhat.com" to FW for ?
+# 2023/01/14 yuhkih Delete Ingress route table and make the order Private -> Firewall -> NatGw (Still you need to change NATGW route table manually) 
 # 2023/01/14 yuhkih Added allow domains to setup an EC2 for Let's Encrypt (needed in case you put the EC2 in ROSA VPC)
 #              - "dl.fedoraproject.org"          # Added to setup EC2 for Let's Encrypt
 #              - "mirrors.fedoraproject.org"     # Added to setup EC2 for Let's Encrypt
@@ -26,9 +32,7 @@
 #              - "ftp.iij.ad.jp"                 # Added to setup EC2 for Let's Encrypt
 #              - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
 # 2023/01/14 yuhkih Export Fierwall subnet id and route tabled id
-# 2023/01/20 yuhkih Removed SSM bastion related resources because they are now included in rosa-ssm-bastion.yaml (actually already removed but mz version was not. )
 # 2023/01/23 yuhkih Added "cloud.redhat.com" to FW # For cluster upgrading
-# 2023/02/04 yuhkin Added "stats.grafana.org"     # RHOAM ?
 # 2023/02/05 yuhkih Added a New FW Rule Group for RHOAM SMTP servers as a draft (If it's ok, transplant this into mz yaml)
 #                   Changed the IP set name from SPLUNK_NET to SPLUNK_SERVERS. Apply SPLUNK_SERVERS to the rulegroup (before this, it was ANY. The list was not actually used)
 #                   Changed the name of "{EnvironmentName}-SplunkAllow-RuleGroup" to "{EnvironmentName}-ROSA-IP-Allow-RuleGroup"
@@ -42,9 +46,11 @@
 #                   - "www.okd.io"                        # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
 #                   - "access.redhat.com"                 # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
 #                   - "observatorium.api.openshift.com"   # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-# 2023/02/06 yuhkih added following domain to RHOAM FW rule
-#                   - "download.geonames.org"             # RHOAM Graphana ?
-#                   - ".ocp4.work"                        # RHOAM custom domain (Replace this with your own domain)
+
+
+
+
+
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Single AZ network with FW"
 
@@ -351,7 +357,6 @@ Resources:
               - "www.okd.io"                         # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
               - "access.redhat.com"                  # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
               - "observatorium.api.openshift.com"    # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name
@@ -446,13 +451,12 @@ Resources:
               - "gcr.io"                            # RHOAM
               - "smtp.sendgrid.net"                 # RHOAM
               - "grafana.com"                       # RHOAM
-              - "raw.githubusercontent.com"         # RHOAM  This also can be seen when installing  OpenShift Pipeline Operator (seems not unique to RHOAM)
+              - "raw.githubusercontent.com"         # RHOAM
               - "auth.docker.io"                    # RHOAM
               - "production.cloudflare.docker.com"  # RHOAM
               - "codeload.github.com"               # RHOAM
               - "objects.githubusercontent.com"     # RHOAM
               - "echo-api.3scale.net"               # RHOAM
-              - "download.geonames.org"             # RHOAM Graphana ?
               - ".ocp4.work"                        # RHOAM custom domain (Replace this with your own domain)
             GeneratedRulesType: "ALLOWLIST"
       Tags:
@@ -480,8 +484,8 @@ Resources:
               - TLS_SNI
             Targets:
               - ".github.io"
-              - "github.com"     # GitHub IdP integraion (1)
-              - "api.github.com" # GitHub IdP integraion (2)
+              - "github.com"
+              - "api.github.com" # added for GitHub IdP (So, ROSA)
               - "acme-v02.api.letsencrypt.org"  # to setup EC2 for Let's Encrypt
               - "acme-staging-v02.api.letsencrypt.org" # to setup EC2 for Let's Encrypt
               - "dl.fedoraproject.org"          # Added to setup EC2 for Let's Encrypt
@@ -519,7 +523,7 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-InspectionFirewall-Policy
 
-  #VPCA Firewall Summary
+  #VPCA Firewall:
   VPCAFirewall:
     DependsOn:
       [
@@ -586,8 +590,30 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref NatGw1
+      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
       RouteTableId: !Ref PrivateRtb1
+
+  # Firewall Route Tables:
+  FirewallRtb1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPCA
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-FirewallRouteTable1
+
+  FirewallRtb1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref FirewallRtb1
+      SubnetId: !Ref FirewallSubnet1
+
+  FirewallRtb1DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGw1
+      RouteTableId: !Ref FirewallRtb1
 
   # NATGW Route Tables:
   NatgwRtb1:
@@ -609,53 +635,8 @@ Resources:
     DependsOn: VPCAFirewall
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
+      GatewayId: !Ref InternetGateway 
       RouteTableId: !Ref NatgwRtb1
-
-  # Firewall Route Tables:
-  FirewallRtb1:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPCA
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-FirewallRouteTable1
-
-  FirewallRtb1Association:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref FirewallRtb1
-      SubnetId: !Ref FirewallSubnet1
-
-  FirewallRtb1DefaultRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway
-      RouteTableId: !Ref FirewallRtb1
-
-  # Ingress Route Table:
-  IngressRtb:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPCA
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-IngressRouteTable
-
-  IngressRtbAssociation:
-    Type: AWS::EC2::GatewayRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref IngressRtb
-      GatewayId: !Ref InternetGateway
-
-  IngressRtbPublicSubnet1Route:
-    Type: AWS::EC2::Route
-    DependsOn: VPCAFirewall
-    Properties:
-      DestinationCidrBlock: !Ref NAT1CIDR
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
-      RouteTableId: !Ref IngressRtb
 
 Outputs:
   MyStacksRegion:
@@ -696,7 +677,7 @@ Outputs:
     Value: !Ref NatgwRtb1
     Export:
       Name: natgw-rtb-id1-rosa
-      
+
   RosaFwRouteTableID1:
     Value: !Ref FirewallRtb1
     Export:

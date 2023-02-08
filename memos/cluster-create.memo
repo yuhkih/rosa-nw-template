@@ -284,7 +284,7 @@ rosa install addon --cluster mycluster managed-api-service -y --rosa-cli-require
 rosa list addons -c mycluster | grep managed-api-service
 
 # Delete RHOAM 
-rosa list addons -c mycluster  # check add-on status like "Not installed" or "deleting" / "installing"
+rosa uninstall addon -c mycluster managed-api-service -y
 
 # GitHub IdP
 ClusterName=mycluster

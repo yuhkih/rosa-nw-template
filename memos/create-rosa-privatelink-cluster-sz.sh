@@ -9,6 +9,7 @@
 # 2023/01/27 yuhkih added --sts (sts is not default yet)
 # 2023/01/20 yuhkih added confirmation (y/n)
 # 2023/01/28 yuhkih added time adjustment for WSL environment
+# 2023/02/06 yuhkih added GitHub integration confirmation
 
 # ------------------------------------------------------
 # Adjust time for WSL 
@@ -110,3 +111,12 @@ rosa logs install -c $ClusterName --watch
 echo "=============================================================="
 echo "[log] create admin user"
 rosa create admin -c $ClusterName
+
+
+# ---------------------------
+# GitHub IdP integration
+# ---------------------------
+echo "[Log] GitHub integration confirmation"
+read -p "Would you like to integrate with GitHub IdP? (y/N): " yn
+case "$yn" in [yY]*) ;; *) echo "[Log] ROSA cluster installation is completed(GitHub integiration Aborted)" ; exit ;; esac
+rosa create idp --type=github --cluster=$ClusterName

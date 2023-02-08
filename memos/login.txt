@@ -1,1 +1,0 @@
-oc login https://api.mycluster.m51o.p1.openshiftapps.com:6443 --username cluster-admin --password QELAu-QcCCW-2YXZ2-ZZYLI

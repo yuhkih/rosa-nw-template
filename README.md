@@ -5,7 +5,28 @@
 
 - AWS CLI 
 - rosa コマンド
-- jq コマンド
+- jq コマンド (optional)
+
+
+AWS CLI のインストールは、[こちらの AWSのページを参照して下さい](https://docs.aws.amazon.com/ja_jp/cli/latest/userguide/getting-started-install.html)
+インストール後、作業対象の AWS アカウントの情報を入力します。
+
+```
+$ aws configure
+AWS Access Key ID [****************PUMH]: ABCDEIFGHIJKPUMH           # 管理者から教えてもらってください
+AWS Secret Access Key [****************Ztkt]: abcdefghijkZtkt　　　　 # 管理者から教えてもらってください
+Default region name [ap-northeast-1]: ap-northeast-1 
+Default output format [None]: 
+$ 
+```
+
+ROSA コマンドは、Linux の場合は以下でインストール可能です。
+
+```
+curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz
+tar -zxf rosa-linux.tar.gz 
+sudo mv ./rosa /usr/local/bin/
+```
 
 # ROSA/RHOAM 用のNetwork のデプロイ
 
@@ -39,6 +60,18 @@
     PrivateSubnetID2 subnet-047a7fa3fb3e1307e Private Subnet ID2
     PrivateSubnetID3 subnet-0c73a76a9757a2174 Private Subnet ID3
     ```
+    
+    もしくは、jq コマンドをインストールしている場合は、AWS CLI で以下のように取得できます。
+
+    ```
+    # PrivateSubnetID1
+    aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet1 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
+    # PrivateSubnetID2
+    aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet2 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
+    PrivateSubnetID3
+    aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet3 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
+    ```
+
 
 1. ROSA の作成に必要な Role と Policy を作成します。
     ```

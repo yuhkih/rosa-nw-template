@@ -1,1 +1,1 @@
-Peronal tool directory
+Personal tool directory

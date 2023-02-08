@@ -150,7 +150,7 @@ sudo mv ./rosa /usr/local/bin/
     ```
 
     - GitHub ユーザーの少なくても一つは dedicated-admin グループに割り当て、管理者として使用します。
-    - ここでは GitHub 連携の詳細の手順は省略します。[こちらを](https://qiita.com/Yuhkih/items/367eccc0cfe64dfbd915#github-id-%E9%80%A3%E6%90%BA) 参照して下さい。
+    - ここでは GitHub 連携の詳細の手順は省略します。GitHub 連携の詳細については[こちらを](https://qiita.com/Yuhkih/items/367eccc0cfe64dfbd915#github-id-%E9%80%A3%E6%90%BA) 参照して下さい。
 
 
 # RHOAM のデプロイ
@@ -192,13 +192,8 @@ sudo mv ./rosa /usr/local/bin/
     ```
 1. rosa CLI を使って RHOAM をインストールします。(現状 STS 構成では GUIでの導入ができません)
     ```
-    rosa install addon --cluster  $ClusterName managed-api-service -y --addon-resource-required true --rosa-cli-required true --billing-model standard
-    W: Addon 'managed-api-service' needs access to resources in account '886101485601'
-    ? CIDR range: 10.1.0.0/26              # 他の VPCと被ってなければ、デフォルトで大丈夫です。
-    ? Notification email: test@redhat.com  # 自分のメールアドレス
-    ? Quota: 1                             # 1を入力します。
-    ? 3scale custom wildcard domain name (optional):   # この後はデフォルトで大丈夫です。
-    ...
+    EMAIL=test@example.com  # 連絡先メールアドレス
+    rosa install addon --cluster mycluster managed-api-service -y --rosa-cli-required true --cidr-range 10.1.0.0/26 --notification-email $EMAIL --addon-managed-api-service 1   --addon-resource-required true  --billing-model standard
     ```
     - 現状、このコマンドは初回と2回目は失敗するようです。1分程度時間を置いて数回繰り返してみて下さい。
 

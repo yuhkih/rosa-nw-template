@@ -2,7 +2,7 @@
 # 1. Three subnets for each AZ.
 #    Privarte subnet - NATGW subent - FW (Public) subnet - Internet Gateway
 # 2. AWS firewall deployed with a policy which allow all the domains listed on the ROSA document as prerequistes for egress.
-#        
+#
 # This template will create the following Network Firewall rules
 #
 #    1) singleaz-DomainAllow-RuleGroup  based on ROSA requirments
@@ -11,13 +11,17 @@
 #    4) singleaz-IcmpAlert-RuleGroup    This crates alert when someone uses ICMP ping in VPC.
 #    
 # This deploys following network model
-#   [Private Subnet] => [ NATGW(protected) Subnet] => [ FW Subnet]
+#   [Private Subnet] => [ FW Subnet] => [ NATGW(protected) Subnet] 
 #   The model is based on the following AWS blog post.
-#   https://aws.amazon.com/jp/blogs/networking-and-content-delivery/deployment-models-for-aws-network-firewall/
-# 
-# 
+#   https://aws.amazon.com/jp/blogs/networking-and-content-delivery/deployment-models-for-aws-network-firewall-with-vpc-routing-enhancements/
+#
+#   [Notice!!!] This template can't rewrite default route entry of Natgateway subent "10.0.0.0/16   local " 
+#               So, you need to change the entry after delploying this template like below.
+#                Destionation    Target              Destination      Target
+#               "10.0.0.0/16     local "   =====>   "10.0.0.0/16      fiewall-endpoint-id
+#
 # History 
-# 2023/01/13 yuhkih add  "catalog.redhat.com" to FW for ?
+# 2023/01/13 yuhkih　add  "catalog.redhat.com" to FW for ?
 # 2023/01/14 yuhkih Added allow domains to setup an EC2 for Let's Encrypt (needed in case you put the EC2 in ROSA VPC)
 #              - "dl.fedoraproject.org"          # Added to setup EC2 for Let's Encrypt
 #              - "mirrors.fedoraproject.org"     # Added to setup EC2 for Let's Encrypt
@@ -26,25 +30,8 @@
 #              - "ftp.riken.jp"                  # Added to setup EC2 for Let's Encrypt
 #              - "ftp.iij.ad.jp"                 # Added to setup EC2 for Let's Encrypt
 #              - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
-# 2023/01/14 yuhkih Removed unnecessary export variables like  private-subnet-id-rosa / private-rtb-id-rosa which don't have serial numbers
-# 2023/01/20 yuhkih Removed SSM bastion related resources because they are now included in rosa-ssm-bastion.yaml
+# 2023/01/14 yuhkih removed uncessary subnet id / route table id ()
 # 2023/01/23 yuhkih Added "cloud.redhat.com" to FW # For cluster upgrading
-# 2023/02/06 yuhkih Added a New FW Rule Group for RHOAM SMTP servers as a draft (If it's ok, transplant this into mz yaml)
-#                   Changed the IP set name from SPLUNK_NET to SPLUNK_SERVERS. Apply SPLUNK_SERVERS to the rulegroup (before this, it was ANY. The list was not actually used)
-#                   Changed the name of "{EnvironmentName}-SplunkAllow-RuleGroup" to "{EnvironmentName}-ROSA-IP-Allow-RuleGroup"
-#                            Replace "SplunkAllowStatefulRuleGroup" with "ROSAIpAllowStatefulRuleGroup"
-#                   Changed the name of "{EnvironmentName}-DomainAllow-RuleGroup" to "{EnvironmentName}-ROSA-Domain-Allow-RuleGroup" 
-#                           Replace  "DomainAllowStatefulRuleGroup" with "ROSADomainAllowStatefulRuleGroup"
-#                   Create "RHOAMDomainAllowStatefulRuleGroup". Moved RHOAM related domain to this group.
-# 2023/02/06 yuhkih moved following domains from RHOAM to ROSA.
-#                   - "aws.amazon.com"                    # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-#                   - "www.redhat.com"                    # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-#                   - "www.okd.io"                        # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-#                   - "access.redhat.com"                 # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-#                   - "observatorium.api.openshift.com"   # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-# 2023/02/06 yuhkih added following domain to RHOAM FW rule
-#                    - "download.geonames.org"             # RHOAM Graphana ?
-#                    - ".ocp4.work"                        # RHOAM custom domain (Replace this with your own domain)
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Multi AZ network with FW"
@@ -345,72 +332,72 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-VpcEnpoint-Sg1
 
-  # VPCASSMEndpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     PrivateDnsEnabled: true
-  #     SecurityGroupIds:
-  #       - !Ref VPCAEndpointSecurityGroup
-  #     ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
-  #     SubnetIds:
-  #       - !Ref NatgwSubnet1
-  #       - !Ref NatgwSubnet2
-  #       - !Ref NatgwSubnet3
-  #     VpcEndpointType: Interface
-  #     VpcId: !Ref VPCA
+  VPCASSMEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !Ref VPCAEndpointSecurityGroup
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+      SubnetIds:
+        - !Ref NatgwSubnet1
+        - !Ref NatgwSubnet2
+        - !Ref NatgwSubnet3
+      VpcEndpointType: Interface
+      VpcId: !Ref VPCA
 
-  # VPCAEC2MessagesEndpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     PrivateDnsEnabled: true
-  #     SecurityGroupIds:
-  #       - !Ref VPCAEndpointSecurityGroup
-  #     ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
-  #     SubnetIds:
-  #       - !Ref NatgwSubnet1
-  #       - !Ref NatgwSubnet2
-  #       - !Ref NatgwSubnet3
-  #     VpcEndpointType: Interface
-  #     VpcId: !Ref VPCA
+  VPCAEC2MessagesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !Ref VPCAEndpointSecurityGroup
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
+      SubnetIds:
+        - !Ref NatgwSubnet1
+        - !Ref NatgwSubnet2
+        - !Ref NatgwSubnet3
+      VpcEndpointType: Interface
+      VpcId: !Ref VPCA
 
-  # VPCASSMMessagesEndpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     PrivateDnsEnabled: true
-  #     SecurityGroupIds:
-  #       - !Ref VPCAEndpointSecurityGroup
-  #     ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
-  #     SubnetIds:
-  #       - !Ref NatgwSubnet1
-  #       - !Ref NatgwSubnet2
-  #       - !Ref NatgwSubnet3
-  #     VpcEndpointType: Interface
-  #     VpcId: !Ref VPCA
+  VPCASSMMessagesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !Ref VPCAEndpointSecurityGroup
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+      SubnetIds:
+        - !Ref NatgwSubnet1
+        - !Ref NatgwSubnet2
+        - !Ref NatgwSubnet3
+      VpcEndpointType: Interface
+      VpcId: !Ref VPCA
 
   # SSM Role:
-  # SubnetRole:
-  #   Type: AWS::IAM::Role
-  #   Properties:
-  #     RoleName: !Sub "SSMRole-${EnvironmentName}-${AWS::Region}"
-  #     Path: "/"
-  #     ManagedPolicyArns:
-  #       - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
-  #     AssumeRolePolicyDocument:
-  #       Version: "2012-10-17"
-  #       Statement:
-  #         - Effect: Allow
-  #           Principal:
-  #             Service:
-  #               - ec2.amazonaws.com
-  #           Action:
-  #             - sts:AssumeRole
+  SubnetRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "SSMRole-${EnvironmentName}-${AWS::Region}"
+      Path: "/"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
 
-  # SubnetInstanceProfile:
-  #   Type: AWS::IAM::InstanceProfile
-  #   Properties:
-  #     Path: "/"
-  #     Roles:
-  #       - !Ref SubnetRole
+  SubnetInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - !Ref SubnetRole
 
   # Fn::GetAtt for Firewall do not return VPCE Id in ordered format.
   # For more details refer to: https://github.com/aws-cloudformation/aws-cloudformation-resource-providers-networkfirewall/issues/15
@@ -514,8 +501,7 @@ Resources:
       Az3: !Ref AvailabilityZone3Selection
       FwArn: !Ref VPCAFirewall
 
-  # AWS Network Firewall (1)
-  # ICMP Roule
+  # AWS Network Firewall:
   # Inspection Firewall Rule Groups:
   ICMPAlertStatefulRuleGroup:
     Type: AWS::NetworkFirewall::RuleGroup
@@ -540,10 +526,10 @@ Resources:
         - Key: Name
           Value: IcmpAlert-RuleGroup
 
-  # AWS Network Firewall (2)
-  # ROSA domain based FW prerequistes
-  # https://access.redhat.com/documentation/en-us/red_hat_openshift_service_on_aws/4/html/prepare_your_environment/rosa-sts-aws-prereqs#osd-aws-privatelink-firewall-prerequisites_rosa-sts-aws-prereqs
-  # "quay.io" is removed because AWF FW returns error saying that "Targets has duplicate values, parameter: [quay.io]"
+  #  ROSA Fireawll Roule Group 1 
+  #  ROSA FW prerequistes 
+  #  https://access.redhat.com/documentation/en-us/red_hat_openshift_service_on_aws/4/html/prepare_your_environment/rosa-sts-aws-prereqs#osd-aws-privatelink-firewall-prerequisites_rosa-sts-aws-prereqs
+  #  "quay.io" is removed because AWF FW returns error saying that "Targets has duplicate values, parameter: [quay.io]"
   ROSADomainAllowStatefulRuleGroup:
     Type: "AWS::NetworkFirewall::RuleGroup"
     Properties:
@@ -589,21 +575,16 @@ Resources:
               - "http-inputs-osdsecuritylogs.splunkcloud.com"
               - "sftp.access.redhat.com"
               - "observatorium-mst.api.openshift.com"
-              - "cloud.redhat.com"                   # For cluster upgrading (Not documented) 
-              - "aws.amazon.com"                     # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-              - "www.redhat.com"                     # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-              - "www.okd.io"                         # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-              - "access.redhat.com"                  # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-              - "observatorium.api.openshift.com"    # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-  
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-ROSA-Domain-Allow-RuleGroup
 
-  # AWS Network Firewall (3)
-  # ROSA IP based Firewall Rule (at the moment for splunk)
-  ROSAIpAllowStatefulRuleGroup:
+
+
+  # Added For splunk
+  # Inspection Firewall Rule Groups:
+  SplunkAllowStatefulRuleGroup:
     Type: AWS::NetworkFirewall::RuleGroup
     Properties:
       RuleGroupName: !Sub ${EnvironmentName}-SplunkAllow-RuleGroup
@@ -625,7 +606,7 @@ Resources:
               Header:
                 Direction: FORWARD
                 Protocol: TCP
-                Destination: $SPLUNK_SERVERS
+                Destination: ANY
                 Source: ANY
                 DestinationPort: 9997
                 SourcePort: ANY
@@ -635,76 +616,6 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-Allow-RuleGroup
 
-  # AWS Network Firewall (4)
-  # Inspection Firewall Rule Groups:    Added For RHOAM SMTP
-  RHOAMIpAllowStatefulRuleGroup:
-    Type: AWS::NetworkFirewall::RuleGroup
-    Properties:
-      RuleGroupName: !Sub ${EnvironmentName}-RHOAM-IP-allow-RuleGroup
-      Type: STATEFUL
-      Capacity: 100
-      RuleGroup:
-        RuleVariables:
-          IPSets:
-            RHOAM_SMTP_SERVERS:
-              Definition:
-                - "13.114.210.107"
-                - "52.220.95.193"
-        RulesSource:
-          StatefulRules:
-            - Action: PASS
-              Header:
-                Direction: FORWARD
-                Protocol: SMTP
-                Destination: ANY
-                Source: $RHOAM_SMTP_SERVERS
-                DestinationPort: 587
-                SourcePort: ANY
-              RuleOptions:
-                - Keyword: "sid:3"
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-RHOAM-IP-allow-RuleGroup
-
-  # AWS Network Firewall (5)
-  # RHOAM domain based rule
-  RHOAMDomainAllowStatefulRuleGroup:
-    Type: "AWS::NetworkFirewall::RuleGroup"
-    Properties:
-      RuleGroupName: !Sub ${EnvironmentName}-RHOAM-Domain-Allow-RuleGroup
-      Type: STATEFUL
-      Capacity: 100
-      RuleGroup:
-        RuleVariables:
-          IPSets:
-            HOME_NET:
-              Definition:
-                - !Ref VpcCIDR
-        RulesSource:
-          RulesSourceList:
-            TargetTypes:
-              - HTTP_HOST
-              - TLS_SNI
-            Targets:
-              - "registry-1.docker.io"              # RHOAM
-              - "gcr.io"                            # RHOAM
-              - "smtp.sendgrid.net"                 # RHOAM
-              - "grafana.com"                       # RHOAM
-              - "raw.githubusercontent.com"         # RHOAM
-              - "auth.docker.io"                    # RHOAM
-              - "production.cloudflare.docker.com"  # RHOAM
-              - "codeload.github.com"               # RHOAM
-              - "objects.githubusercontent.com"     # RHOAM
-              - "echo-api.3scale.net"               # RHOAM
-              - "download.geonames.org"             # RHOAM Graphana ?
-              - ".ocp4.work"                        # RHOAM custom domain (Replace this with your own domain)
-            GeneratedRulesType: "ALLOWLIST"
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-RHOAM-Domain-Allow-RuleGroup
-
-  # AWS Network Firewall (6)
-  # User installed components
   DomainAllowStatefulRuleGroupForApp:
     Type: "AWS::NetworkFirewall::RuleGroup"
     Properties:
@@ -725,9 +636,9 @@ Resources:
             Targets:
               - ".github.io"
               - "github.com"
-              - "api.github.com" # added for GitHub IdP (So, ROSA)
-              - "acme-v02.api.letsencrypt.org"  # to setup EC2 for Let's Encrypt
-              - "acme-staging-v02.api.letsencrypt.org" # to setup EC2 for Let's Encrypt
+              - "api.github.com" # added for GitHub IdP
+              - "acme-v02.api.letsencrypt.org" # Added for Let's Encrypt
+              - "acme-staging-v02.api.letsencrypt.org" # Added for Let's Encrypt
               - "dl.fedoraproject.org"          # Added to setup EC2 for Let's Encrypt
               - "mirrors.fedoraproject.org"     # Added to setup EC2 for Let's Encrypt
               - "d2lzkl7pfhq30w.cloudfront.net" # Added to setup EC2 for Let's Encrypt
@@ -735,15 +646,31 @@ Resources:
               - "ftp.riken.jp"                  # Added to setup EC2 for Let's Encrypt
               - "ftp.iij.ad.jp"                 # Added to setup EC2 for Let's Encrypt
               - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
-              - ".openshiftapps.com"            # For public cluster installation. You can narrow down this domain after installation complete to like ".apps.<cluster name>.<random>.<random>.openshiftapps.com"
-              - "catalog.redhat.com"            # This was logged (ROSA ?)
-            GeneratedRulesType: "ALLOWLIST"
+              - ".openshiftapps.com"   # For public cluster installation. You can narrow down this domain after installation complete to like ".apps.<cluster name>.<random>.<random>.openshiftapps.com"
+              - "registry-1.docker.io"              # RHOAM
+              - "gcr.io"                            # RHOAM
+              - "smtp.sendgrid.net"                 # RHOAM
+              - "grafana.com"                       # RHOAM
+              - "raw.githubusercontent.com"         # RHOAM
+              - "auth.docker.io"                    # RHOAM
+              - "production.cloudflare.docker.com"  # RHOAM
+              - "codeload.github.com"               # RHOAM
+              - "aws.amazon.com"                    # RHOAM
+              - "www.redhat.com"                    # RHOAM
+              - "www.okd.io"                        # RHOAM
+              - "access.redhat.com"                 # RHOAM
+              - "observatorium.api.openshift.com"   # RHOAM
+              - "objects.githubusercontent.com"     # RHOAM
+              - "catalog.redhat.com"                # ?
+              - "echo-api.3scale.net"               # RHOAM
+              - "cloud.redhat.com"                  # For cluster upgrading (Not documented for ROSA)
+            GeneratedRulesType: "ALLOWLIST"         
+
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-DomainAllow-RuleGroup-For-Application
 
-
-  # VPCA Firewall Policy:
+  #VPCA Firewall Policy:
   EgressFirewallPolicy:
     Type: AWS::NetworkFirewall::FirewallPolicy
     Properties:
@@ -754,26 +681,22 @@ Resources:
         StatelessFragmentDefaultActions:
           - "aws:forward_to_sfe"
         StatefulRuleGroupReferences:
+          - ResourceArn: !Ref DomainAllowStatefulRuleGroup
           - ResourceArn: !Ref ICMPAlertStatefulRuleGroup
-          - ResourceArn: !Ref ROSADomainAllowStatefulRuleGroup
-          - ResourceArn: !Ref ROSAIpAllowStatefulRuleGroup
           - ResourceArn: !Ref DomainAllowStatefulRuleGroupForApp
-          - ResourceArn: !Ref RHOAMDomainAllowStatefulRuleGroup
-          - ResourceArn: !Ref RHOAMIpAllowStatefulRuleGroup
+          - ResourceArn: !Ref SplunkAllowStatefulRuleGroup
       Tags:
         - Key: Name
-          Value: !Sub ${EnvironmentName}-InspectionFirewall-Policy
+          Value: InspectionFirewall-Policy
 
   #VPCA Firewall:
   VPCAFirewall:
     DependsOn:
       [
         ICMPAlertStatefulRuleGroup,
-        ROSADomainAllowStatefulRuleGroup,
-        ROSAIpAllowStatefulRuleGroup,
-        RHOAMDomainAllowStatefulRuleGroup,
-        RHOAMIpAllowStatefulRuleGroup,
+        DomainAllowStatefulRuleGroup,
         DomainAllowStatefulRuleGroupForApp,
+        SplunkAllowStatefulRuleGroup,
       ]
     Type: AWS::NetworkFirewall::Firewall
     Properties:
@@ -833,7 +756,7 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref NatGw1
+      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1 # NatGatewayId: !Ref NatGw1
       RouteTableId: !Ref PrivateRtb1
 
   PrivateRtb2:
@@ -854,7 +777,7 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref NatGw2
+      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId2 # !Ref NatGw2
       RouteTableId: !Ref PrivateRtb2
 
   PrivateRtb3:
@@ -875,7 +798,7 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref NatGw3
+      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId3 #  !Ref NatGw3
       RouteTableId: !Ref PrivateRtb3
 
   # NATGW Route Tables:
@@ -900,7 +823,7 @@ Resources:
     DependsOn: VPCAFirewall
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
+      GatewayId: !Ref InternetGateway # !GetAtt FirewallVpceIds.FwVpceId1
       RouteTableId: !Ref NatgwRtb1
 
 
@@ -925,7 +848,7 @@ Resources:
     DependsOn: VPCAFirewall
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId2
+      GatewayId: !Ref InternetGateway # !GetAtt FirewallVpceIds.FwVpceId2
       RouteTableId: !Ref NatgwRtb2
 
 
@@ -950,7 +873,7 @@ Resources:
     DependsOn: VPCAFirewall
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId3
+      GatewayId: !Ref InternetGateway # !GetAtt FirewallVpceIds.FwVpceId3
       RouteTableId: !Ref NatgwRtb3
 
 
@@ -973,7 +896,7 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway
+      NatGatewayId: !Ref NatGw1 #  !Ref InternetGateway 
       RouteTableId: !Ref FirewallRtb1
 
   FirewallRtb2:
@@ -994,7 +917,7 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway
+      NatGatewayId: !Ref NatGw2 # !Ref InternetGateway
       RouteTableId: !Ref FirewallRtb2
 
   FirewallRtb3:
@@ -1015,47 +938,10 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway
+      NatGatewayId: !Ref NatGw3 # !Ref InternetGateway
       RouteTableId: !Ref FirewallRtb3
 
-  # Ingress Route Table:
-  IngressRtb:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPCA
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-IngressRouteTable
-
-  IngressRtbAssociation:
-    Type: AWS::EC2::GatewayRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref IngressRtb
-      GatewayId: !Ref InternetGateway
-
-  IngressRtbNatgwSubnet1Route:
-    Type: AWS::EC2::Route
-    DependsOn: VPCAFirewall
-    Properties:
-      DestinationCidrBlock: !Ref Natgw1CIDR
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId1
-      RouteTableId: !Ref IngressRtb
-
-  IngressRtbNatgwSubnet2Route:
-    Type: AWS::EC2::Route
-    DependsOn: VPCAFirewall
-    Properties:
-      DestinationCidrBlock: !Ref Natgw2CIDR
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId2
-      RouteTableId: !Ref IngressRtb
-
-  IngressRtbNatgwSubnet3Route:
-    Type: AWS::EC2::Route
-    DependsOn: VPCAFirewall
-    Properties:
-      DestinationCidrBlock: !Ref Natgw3CIDR
-      VpcEndpointId: !GetAtt FirewallVpceIds.FwVpceId3
-      RouteTableId: !Ref IngressRtb
+ 
 
 Outputs:
   MyStacksRegion:
@@ -1084,9 +970,7 @@ Outputs:
     Export:
       Name: vpc-id-rosa
 
-
-
-# add new
+# For AZ1 variables
   RosaPrivateSubnetID1:
     Value: !Ref PrivateSubnet1
     Export:
@@ -1117,7 +1001,8 @@ Outputs:
     Export:
       Name: fw-rtb-id1-rosa
 
-# add new
+# For AZ2 variables
+
   RosaPrivateSubnetID2:
     Value: !Ref PrivateSubnet2
     Export:
@@ -1148,8 +1033,8 @@ Outputs:
     Export:
       Name: fw-rtb-id2-rosa
 
+# For AZ3 variables
 
-# add new
   RosaPrivateSubnetID3:
     Value: !Ref PrivateSubnet3
     Export:
@@ -1164,7 +1049,6 @@ Outputs:
     Value: !Ref FirewallSubnet3
     Export:
       Name: fw-subnet-id3-rosa
-
 
   RosaPrivateRouteTableID3:
     Value: !Ref PrivateRtb3

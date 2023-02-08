@@ -10,42 +10,22 @@
 # Multit AZ Network のデプロイ
 
 1. 以下の CloudFormation のテンプレートを使用して、ROSA をインストールするためのネットワークを作成します。
-    ```
-    rosa-PRV_FW_NAT-mz.yaml
-    ```
-    デプロイ完了まで待ちます。
 
-1. デプロイが完了したら AWS Cosole の `EC2`-> `仮想プライベートクラウド` -> `エンドポイント` に行きます。
-
-    そこで、`エンドポイントタイプ` が  `GatewayLoadBalancer`　の エンドポイントID と所属する アベイラビリティゾーンの値を以下のようにメモします。
-
+    Single AZ 環境の場合は、
     ```
-    [詳細タブのエンドポイントID]     [サブネットタブのアベイラビリティーゾーン]
-    vpce-07fadabe59262d01e         ap-northeast-1a (apne1-az4)
-    vpce-025ad3e7584202ebf         ap-northeast-1c (apne1-az1)
-    vpce-091fc77824f78efd3         ap-northeast-1d (apne1-az2)
+     rosa-PRV_NAT_FW-sz.yaml
     ```
-
-1. AWS Console で、`VPC` -> `仮想プライベートクラウド` -> `ルートテーブル` に行きます。
-    `multiaz-NatgwRouteTable1` という名前のルートテーブルを探します。このルートテーブルの `ルート`タブを見ます。
-    ```
-    10.0.0.0/16     local
-    ```
-    となっている所を
-    ```    
-    10.0.0.0/16     <各 Zone の Firewall Endpoint の値>
-    ```
-    のようにに置き換えます。
     
-    ルートテーブルの`タグ`の画面に AZ が書いてあるので、それに会わせて、同じ AZ に所属する先ほどメモした `エンドポイント` (=ゲートウェイロードバランサーのエンドポイント) を指定していきます。
+    Multi AZ 環境の場合は
 
-    ルートテーブルの編集画面から`ゲートウェイロードバランサーのエンドポイント` を選ぶと手で入力しなくても、リスト形式で表示されます。
+    ```
+    rosa-PRV_NAT_FW-mz.yaml
+    ```
+    を使用して、デプロイ完了まで待ちます。
 
-    この作業を `multiaz-NatgwRouteTable1` `multiaz-NatgwRouteTable2` `multiaz-NatgwRouteTable3` に対して合計3回作業します。間違えると動作がおかしくなるので良く確認しましょう。
-    
-    これで以下の構成の Network がデプロイされた事になります。
+    これをデプロイする事で、Single AZ の場合は、以下のような環境が作成されます。
 
-<絵:TBD>
+    ![Single AZ Network](/images/single-az-network.png) 
 
 
 # PrivateLink を使用した RHOAM 用 ROSA Cluster のインストール

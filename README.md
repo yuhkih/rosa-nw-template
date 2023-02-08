@@ -20,13 +20,27 @@ Default output format [None]:
 $ 
 ```
 
-ROSA コマンドは、Linux の場合は以下でインストール可能です。
+ROSA コマンドは、[こちらか](https://console.redhat.com/openshift/downloads)、もしくは[こちから](https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/)ダウンロード可能です。
+Linux の場合は以下でインストール可能です。
 
 ```
 curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz
 tar -zxf rosa-linux.tar.gz 
 sudo mv ./rosa /usr/local/bin/
 ```
+
+
+jq コマンドは Ubuntu の場合は、
+```
+ sudo apt-get install jq
+ ```
+
+RHEL系 (Amazon Linux等)の場合は、
+```
+ sudo yum install jq
+```
+でインストール可能です。
+
 
 # ROSA/RHOAM 用のNetwork のデプロイ
 

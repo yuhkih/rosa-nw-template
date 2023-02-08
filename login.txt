@@ -1,1 +1,0 @@
-oc login https://api.mycluster.dzfa.p1.openshiftapps.com:6443 --username cluster-admin --password HVARm-dHcVb-3yI4I-EedoN

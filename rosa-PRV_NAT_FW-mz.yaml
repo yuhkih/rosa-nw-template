@@ -217,6 +217,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-Private-Subnet1
+        - Key: kubernetes.io/role/internal-elb
+          Value: "true"
 
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
@@ -230,6 +232,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-Private-Subnet2
+        - Key: kubernetes.io/role/internal-elb
+          Value: "true"
 
   PrivateSubnet3:
     Type: AWS::EC2::Subnet
@@ -243,6 +247,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-Private-Subnet3
+        - Key: kubernetes.io/role/internal-elb
+          Value: "true"
 
   # Subnets for NAT GWs:
   NatgwSubnet1:
@@ -299,6 +305,8 @@ Resources:
           Value: !Sub ${EnvironmentName}-Firewall-Subnet1
         - Key: kubernetes.io/role/elb
           Value: "true"
+        - Key: tag-value
+          Value: "my-cluster-public"
 
   FirewallSubnet2:
     Type: AWS::EC2::Subnet
@@ -314,6 +322,8 @@ Resources:
           Value: !Sub ${EnvironmentName}-Firewall-Subnet2
         - Key: kubernetes.io/role/elb
           Value: "true"
+        - Key: tag-value
+          Value: "my-cluster-public"
 
   FirewallSubnet3:
     Type: AWS::EC2::Subnet
@@ -329,6 +339,8 @@ Resources:
           Value: !Sub ${EnvironmentName}-Firewall-Subnet3
         - Key: kubernetes.io/role/elb
           Value: "true"
+        - Key: tag-value
+          Value: "my-cluster-public"
 
   # AWS PrivateLink interface endpoint for services:
   VPCAEndpointSecurityGroup:

@@ -183,6 +183,8 @@ Resources:
           Value: !Sub ${EnvironmentName}-Firewall-Subnet1
         - Key: kubernetes.io/role/elb
           Value: "true"
+        - Key: tag-value
+          Value: "my-cluster-public"
 
   # Fn::GetAtt for Firewall do not return VPCE Id in ordered format.
   # For more details refer to: https://github.com/aws-cloudformation/aws-cloudformation-resource-providers-networkfirewall/issues/15

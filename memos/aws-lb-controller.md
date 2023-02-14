@@ -3,6 +3,11 @@
 * A multi-region ROSA cluster with STS enabled
 * AWS CLI
 * Helm 3 CLI
+* rosa CLI
+* 3 AZ
+
+https://github.com/aws/eks-charts/tree/master/stable/aws-load-balancer-controller
+https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/?nc1=h_ls
 
 ## Getting Started
 
@@ -13,7 +18,7 @@
     ```bash
     export AWS_PAGER=""
     export ALB_VERSION="v2.4.0"
-    export CLUSTER_NAME="cz-demo"
+    export CLUSTER_NAME="my-cluster"
     export SCRATCH_DIR="/tmp/alb-sts"
     export OIDC_PROVIDER=$(oc get authentication.config.openshift.io cluster -o json \
       | jq -r .spec.serviceAccountIssuer| sed -e "s/^https:\/\///")
@@ -117,6 +122,8 @@
 
 1. Get list of Subnets
 
+    If ROSA Public cluster
+
     ```bash
     SUBNET_IDS=$(aws ec2 describe-subnets --output json \
       --filters Name=tag-value,Values="${CLUSTER_NAME}-*public*" \
@@ -124,22 +131,20 @@
     echo ${SUBNET_IDS}
     ```
 
+    If ROSA Private Cluster 
+
+    ```
+    SUBNET_IDS= <set your public subnet ids in the ROSA cluster VPC>
+    ````
+
+
+
 1. Add tags to those subnets (change the subnet ids in the resources line)
 
     ```bash
     aws ec2 create-tags \
       --resources $(echo ${SUBNET_IDS}) \
-      --tags Key=kubernetes.io/role/elb,Value=''
-    ```
-
-1. Get cluster name (according to AWS Tags)
-
-    ```bash
-    AWS_CLUSTER=$(basename $(aws ec2 describe-subnets \
-      --filters Name=tag-value,Values="${CLUSTER_NAME}-*public*" \
-      --query 'Subnets[0].Tags[?Value==`shared`].Key[]' | jq -r '.[0]'))
-
-    echo $AWS_CLUSTER
+       --tags Key=kubernetes.io/role/elb,Value='1' Key=kubernetes.io/cluster/${CLUSTER_NAME},Value=shared
     ```
 
 1. Create a namespace for the controller
@@ -160,15 +165,16 @@
     ```bash
     helm repo add eks https://aws.github.io/eks-charts
     helm repo update
-    helm upgrade alb-controller eks/aws-load-balancer-controller -i \
-      -n $NAMESPACE --set clusterName=$CLUSTER_NAME \
+    helm install aws-load-balancer-controller eks/aws-load-balancer-controller -i \
+      -n $NAMESPACE \
+      --set clusterName=$CLUSTER_NAME \
       --set serviceAccount.name=$SA \
       --set "vpcId=$VPC" \
       --set "region=$REGION" \
       --set serviceAccount.annotations.'eks\.amazonaws\.com/role-arn'=$ALB_ROLE \
-      --set "clusterName=$AWS_CLUSTER" \
       --set "image.repository=amazon/aws-alb-ingress-controller" \
-      --set "image.tag=$ALB_VERSION" --version 1.4.0
+      --set "image.tag=$ALB_VERSION" --version 1.4.0 \
+      --set replicaCount=1
     ```
 
 1. Update SCC to allow setting fsgroup in Deployment
@@ -196,9 +202,9 @@
     apiVersion: networking.k8s.io/v1
     kind: Ingress
     metadata:
-    name: django-ex
-    namespace: demo
-    annotations:
+      name: django-ex
+      namespace: demo
+      annotations:
         kubernetes.io/ingress.class: alb
         alb.ingress.kubernetes.io/scheme: internet-facing
         alb.ingress.kubernetes.io/target-type: instance
@@ -207,19 +213,19 @@
         app: django-ex
     spec:
     rules:
-        - host: foo.bar
+      - host: foo.bar
         http:
-            paths:
-            - pathType: Prefix
-                path: /
-                backend:
+          paths:
+          - pathType: Prefix
+            path: /
+            backend:
                 service:
-                    name: django-ex
-                    port:
+                  name: django-ex
+                  port:
                     number: 8080
     EOF
     ```
-
+:q!
 1. Check the logs of the ALB controller
 
     ```bash

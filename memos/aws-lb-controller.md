@@ -35,6 +35,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
       | jq -r .spec.serviceAccountIssuer| sed -e "s/^https:\/\///")
     export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
     export REGION=$(rosa describe cluster -c $CLUSTER_NAME -o json | jq -r .region.id)
+    # export REGION=ap-northeast-1
     export NAMESPACE="alb-controller"
     export SA="alb-controller"
     rm -rf $SCRATCH_DIR
@@ -176,7 +177,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
     ```bash
     helm repo add eks https://aws.github.io/eks-charts
     helm repo update
-    helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+    helm upgrade alb-controller eks/aws-load-balancer-controller -i \
       -n $NAMESPACE \
       --set clusterName=$CLUSTER_NAME \
       --set serviceAccount.name=$SA \
@@ -215,27 +216,27 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
     apiVersion: networking.k8s.io/v1
     kind: Ingress
     metadata:
-      name: django-ex
-      namespace: demo
-      annotations:
+    name: django-ex
+    namespace: demo
+    annotations:
         kubernetes.io/ingress.class: alb
-        alb.ingress.kubernetes.io/scheme: internet-facing
+        alb.ingress.kubernetes.io/scheme: internal
         alb.ingress.kubernetes.io/target-type: instance
         alb.ingress.kubernetes.io/group.name: "demo"
-    labels:
+      labels:
         app: django-ex
     spec:
         rules:
         - host: foo.bar
-            http:
+        http:
             paths:
             - pathType: Prefix
-                path: /
-                backend:
-                    service:
-                    name: django-ex
-                    port:
-                        number: 8080
+            path: /
+            backend:
+              service:
+                name: django-ex
+                port:
+                  number: 8080
     EOF
     ```
 
@@ -243,7 +244,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 
     ```bash
     kubectl -n $NAMESPACE logs -f \
-       deployment/aws-load-balancer-controller
+       deployment/alb-controller-aws-load-balancer-controller 
     ```
 
 1. Save the ingress address
@@ -277,7 +278,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 1. Uninstall the ALB Controller
 
     ```bash
-    helm delete -n $NAMESPACE aws-load-balancer-controller
+    helm delete -n $NAMESPACE alb-controller
     ```
 
 1. Get PolicyARN

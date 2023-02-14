@@ -54,27 +54,27 @@
 1. Create a Trust Policy
 
     ```bash
-cat <<EOF > $SCRATCH_DIR/TrustPolicy.json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Federated": "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER}"
-      },
-      "Action": "sts:AssumeRoleWithWebIdentity",
-      "Condition": {
-        "StringEquals": {
-          "${OIDC_PROVIDER}:sub": [
-            "system:serviceaccount:${NAMESPACE}:${SA}"
-          ]
+        cat <<EOF > $SCRATCH_DIR/TrustPolicy.json
+        {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER}"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+                "StringEquals": {
+                "${OIDC_PROVIDER}:sub": [
+                    "system:serviceaccount:${NAMESPACE}:${SA}"
+                ]
+                }
+            }
+            }
+        ]
         }
-      }
-    }
-  ]
-}
-EOF
+        EOF
     ```
 
 1. Create Role for ALB Controller
@@ -100,19 +100,19 @@ EOF
 1. Get the Instance Name of one of your worker nodes
 
     ```bash
-NODE=$(oc get nodes --selector=node-role.kubernetes.io/worker \
-  -o jsonpath='{.items[0].metadata.name}')
-echo $NODE
+    NODE=$(oc get nodes --selector=node-role.kubernetes.io/worker \
+    -o jsonpath='{.items[0].metadata.name}')
+    echo $NODE
     ```
 
 1. Get the VPC ID of your worker nodes
 
     ```bash
-VPC=$(aws ec2 describe-instances \
-  --filters "Name=private-dns-name,Values=$NODE" \
-  --query 'Reservations[*].Instances[*].{VpcId:VpcId}' \
-  | jq -r '.[0][0].VpcId')
-echo $VPC
+    VPC=$(aws ec2 describe-instances \
+    --filters "Name=private-dns-name,Values=$NODE" \
+    --query 'Reservations[*].Instances[*].{VpcId:VpcId}' \
+    | jq -r '.[0][0].VpcId')
+    echo $VPC
     ```
 
 1. Get list of Subnets
@@ -192,32 +192,32 @@ echo $VPC
     > Note: Setting the `alb.ingress.kubernetes.io/group.name` allows you to create multiple ALB Ingresses using the same ALB which can help reduce your AWS costs.
 
     ```bash
-cat << EOF | kubectl apply -f -
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: django-ex
-  namespace: demo
-  annotations:
-    kubernetes.io/ingress.class: alb
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: instance
-    alb.ingress.kubernetes.io/group.name: "demo"
-  labels:
-    app: django-ex
-spec:
-  rules:
-    - host: foo.bar
-      http:
-        paths:
-          - pathType: Prefix
-            path: /
-            backend:
-              service:
-                name: django-ex
-                port:
-                  number: 8080
-EOF
+    cat << EOF | kubectl apply -f -
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+    name: django-ex
+    namespace: demo
+    annotations:
+        kubernetes.io/ingress.class: alb
+        alb.ingress.kubernetes.io/scheme: internet-facing
+        alb.ingress.kubernetes.io/target-type: instance
+        alb.ingress.kubernetes.io/group.name: "demo"
+    labels:
+        app: django-ex
+    spec:
+    rules:
+        - host: foo.bar
+        http:
+            paths:
+            - pathType: Prefix
+                path: /
+                backend:
+                service:
+                    name: django-ex
+                    port:
+                    number: 8080
+    EOF
     ```
 
 1. Check the logs of the ALB controller
@@ -264,9 +264,9 @@ EOF
 1. Get PolicyARN
 
     ```bash
-POLICY_ARN=$(aws iam list-policies \
-  --query 'Policies[?PolicyName==`AWSLoadBalancerControllerIAMPolicy-'$ALB_VERSION'`].Arn' \
-  --output text)
+    POLICY_ARN=$(aws iam list-policies \
+    --query 'Policies[?PolicyName==`AWSLoadBalancerControllerIAMPolicy-'$ALB_VERSION'`].Arn' \
+    --output text)
     ```
 
 1. Dettach the Policy from the Role

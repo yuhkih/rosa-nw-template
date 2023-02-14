@@ -45,6 +45,8 @@
 # 2023/02/06 yuhkih added following domain to RHOAM FW rule
 #                   - "download.geonames.org"             # RHOAM Graphana ?
 #                   - ".ocp4.work"                        # RHOAM custom domain (Replace this with your own domain)
+# 2023/02/11 yuhkih add ExportVariablePrefix to avoid export variable conflicts
+
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Single AZ network with FW"
 
@@ -84,6 +86,12 @@ Parameters:
     Description: Please enter the IP range (CIDR notation) for Firewall Netwowrk1
     Type: String
     Default: "10.0.16.0/28"
+  
+  # Export Variable Prefix
+  ExportVariablePrefix:
+    Description: Prefix for Export variables
+    Type: String
+    Default: "myex"
 
   AvailabilityZone1Selection:
     Description: Availability Zone 1
@@ -664,40 +672,40 @@ Outputs:
   RosaVpcCIDR:
     Value: !Ref VpcCIDR
     Export:
-      Name: vpc-cidr-rosa
+      Name: !Sub ${ExportVariablePrefix}-vpc-cidr-rosa
 
   RosaVpcID:
     Value: !Ref VPCA
     Export:
-      Name: vpc-id-rosa
+      Name: !Sub ${ExportVariablePrefix}-vpc-id-rosa
 
 
   RosaPrivateSubnetID1:
     Value: !Ref PrivateSubnet1
     Export:
-      Name: private-subnet-id1-rosa
+      Name: !Sub ${ExportVariablePrefix}-private-subnet-id1-rosa
 
   RosaNatGwSubnetID1:
     Value: !Ref NatgwSubnet1
     Export:
-      Name: natgw-subnet-id1-rosa
+      Name: !Sub ${ExportVariablePrefix}-natgw-subnet-id1-rosa
   
   RosaFwSubnetID1:
     Value: !Ref FirewallSubnet1
     Export:
-      Name: fw-subnet-id1-rosa
+      Name: !Sub ${ExportVariablePrefix}-fw-subnet-id1-rosa
 
   RosaPrivateRouteTableID1:
     Value: !Ref PrivateRtb1
     Export:
-      Name: private-rtb-id1-rosa
+      Name: !Sub ${ExportVariablePrefix}-private-rtb-id1-rosa
 
   RosaNatGwRouteTableID1:
     Value: !Ref NatgwRtb1
     Export:
-      Name: natgw-rtb-id1-rosa
+      Name: !Sub ${ExportVariablePrefix}-natgw-rtb-id1-rosa
       
   RosaFwRouteTableID1:
     Value: !Ref FirewallRtb1
     Export:
-      Name: fw-rtb-id1-rosa
+      Name: !Sub ${ExportVariablePrefix}-fw-rtb-id1-rosa

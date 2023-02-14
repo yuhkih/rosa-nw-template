@@ -1,7 +1,7 @@
 #!/bin/sh
 # 2023/01/20 yuhkih initial make
 
-ClusterName=mycluster
+ClusterName=my-cluster
 
 # need to get cluster id before deleting the cluster
 echo "[Log] get cluster id" 

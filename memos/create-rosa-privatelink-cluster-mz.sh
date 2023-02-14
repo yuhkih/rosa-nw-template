@@ -14,7 +14,7 @@
 # ------------------------------------------------------
 # Basic Information
 # ------------------------------------------------------
-ClusterName=mycluster
+ClusterName=my-cluster
 RosaCIDR="10.0.0.0/16"
 NumberOfWorkers="3"
 

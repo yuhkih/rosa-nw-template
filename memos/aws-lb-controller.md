@@ -9,11 +9,22 @@
 https://github.com/aws/eks-charts/tree/master/stable/aws-load-balancer-controller
 https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/?nc1=h_ls
 
+
 ## Getting Started
 
-1. Set some environment variables
+1. Login OpenShift 
 
-1. Disable AWS cli output paging
+    ```
+    oc login https://api.my-cluster.m51o.p1.openshiftapps.com:6443 --username cluster-admin --password CoSIw-jxpVD-UGsNz-xypAM
+    ```
+
+1. configure AWS CLI
+
+    ```
+    aws configure
+    ```
+
+1. Set some environment variables
 
     ```bash
     export AWS_PAGER=""
@@ -131,10 +142,10 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
     echo ${SUBNET_IDS}
     ```
 
-    If ROSA Private Cluster 
+    If ROSA Private Cluster (you need three subnet IDs with space separation)
 
     ```
-    SUBNET_IDS= <set your public subnet ids in the ROSA cluster VPC>
+    SUBNET_IDS= <set your public subnet ids in the ROSA cluster VPC with space>
     ````
 
 
@@ -173,7 +184,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
       --set "region=$REGION" \
       --set serviceAccount.annotations.'eks\.amazonaws\.com/role-arn'=$ALB_ROLE \
       --set "image.repository=amazon/aws-alb-ingress-controller" \
-      --set "image.tag=$ALB_VERSION" --version 1.4.0 \
+      --set "image.tag=$ALB_VERSION" --version 1.4.0 
     ```
 
 1. Update SCC to allow setting fsgroup in Deployment
@@ -197,7 +208,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
     > Note: Setting the `alb.ingress.kubernetes.io/group.name` allows you to create multiple ALB Ingresses using the same ALB which can help reduce your AWS costs
     > Note: alb.ingress.kubernetes.io/scheme: internet-facing or internal
     https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/ingress/annotations/
-    
+
 
     ```bash
     cat << EOF | kubectl apply -f -
@@ -214,20 +225,20 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
     labels:
         app: django-ex
     spec:
-    rules:
-      - host: foo.bar
-        http:
-          paths:
-          - pathType: Prefix
-            path: /
-            backend:
-                service:
-                  name: django-ex
-                  port:
-                    number: 8080
+        rules:
+        - host: foo.bar
+            http:
+            paths:
+            - pathType: Prefix
+                path: /
+                backend:
+                    service:
+                    name: django-ex
+                    port:
+                        number: 8080
     EOF
     ```
-:q!
+
 1. Check the logs of the ALB controller
 
     ```bash

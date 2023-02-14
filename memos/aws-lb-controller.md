@@ -59,27 +59,27 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 1. Create a Trust Policy
 
     ```bash
-        cat <<EOF > $SCRATCH_DIR/TrustPolicy.json
-        {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-            "Effect": "Allow",
-            "Principal": {
-                "Federated": "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER}"
-            },
-            "Action": "sts:AssumeRoleWithWebIdentity",
-            "Condition": {
-                "StringEquals": {
-                "${OIDC_PROVIDER}:sub": [
-                    "system:serviceaccount:${NAMESPACE}:${SA}"
-                ]
-                }
-            }
-            }
-        ]
-        }
-        EOF
+    cat <<EOF > $SCRATCH_DIR/TrustPolicy.json
+    {
+     "Version": "2012-10-17",
+     "Statement": [
+         {
+         "Effect": "Allow",
+         "Principal": {
+             "Federated": "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER}"
+         },
+         "Action": "sts:AssumeRoleWithWebIdentity",
+         "Condition": {
+             "StringEquals": {
+             "${OIDC_PROVIDER}:sub": [
+                 "system:serviceaccount:${NAMESPACE}:${SA}"
+             ]
+             }
+         }
+         }
+     ]
+     }
+    EOF
     ```
 
 1. Create Role for ALB Controller
@@ -165,7 +165,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
     ```bash
     helm repo add eks https://aws.github.io/eks-charts
     helm repo update
-    helm install aws-load-balancer-controller eks/aws-load-balancer-controller -i \
+    helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
       -n $NAMESPACE \
       --set clusterName=$CLUSTER_NAME \
       --set serviceAccount.name=$SA \
@@ -174,7 +174,6 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
       --set serviceAccount.annotations.'eks\.amazonaws\.com/role-arn'=$ALB_ROLE \
       --set "image.repository=amazon/aws-alb-ingress-controller" \
       --set "image.tag=$ALB_VERSION" --version 1.4.0 \
-      --set replicaCount=1
     ```
 
 1. Update SCC to allow setting fsgroup in Deployment
@@ -195,7 +194,10 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 
 1. Create an Ingress to trigger an ALB
 
-    > Note: Setting the `alb.ingress.kubernetes.io/group.name` allows you to create multiple ALB Ingresses using the same ALB which can help reduce your AWS costs.
+    > Note: Setting the `alb.ingress.kubernetes.io/group.name` allows you to create multiple ALB Ingresses using the same ALB which can help reduce your AWS costs
+    > Note: alb.ingress.kubernetes.io/scheme: internet-facing or internal
+    https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/ingress/annotations/
+    
 
     ```bash
     cat << EOF | kubectl apply -f -
@@ -230,7 +232,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 
     ```bash
     kubectl -n $NAMESPACE logs -f \
-      deployment/alb-controller-aws-load-balancer-controller
+       deployment/aws-load-balancer-controller
     ```
 
 1. Save the ingress address
@@ -264,7 +266,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 1. Uninstall the ALB Controller
 
     ```bash
-    helm delete -n $NAMESPACE alb-controller
+    helm delete -n $NAMESPACE aws-load-balancer-controller
     ```
 
 1. Get PolicyARN

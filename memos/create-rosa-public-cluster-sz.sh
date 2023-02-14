@@ -14,8 +14,8 @@
 # ------------------------------------------------------
 # Basic Information
 # ------------------------------------------------------
-ClusterName=mycluster
-RosaCIDR="10.0.0.0/16"
+ClusterName=mypubcluster
+RosaCIDR="10.20.0.0/16"
 NumberOfWorkers="2"
 RosaVersion="4.10.47"
 Region="ap-northeast-1"

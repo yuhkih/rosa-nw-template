@@ -297,3 +297,19 @@ rosa create idp --type=github --cluster=$ClusterName
 ClusterName=mycluster
 rosa grant user dedicated-admin --user=yuhkih --cluster=$ClusterName
 rosa list users --cluster=$ClusterName
+
+
+rosa create admin -c $ClusterName
+# BYOVPC Test memo
+  STS - Public - OK
+  non-STS - Public - OK (login ok)
+  STS - Private (just in case ) - 存在しない。STSは Public or PrivateLink の2択
+  non STS - Private (just in case ) -  
+
+# non-STS で PrivateLink の  Menu出てくる？ => 出てくる
+# non-STS PrivateLink で、
+# non-STS PrivateLink の LB 構成 
+# non-STS PrivateLink の　BYOVPC は必須か？
+
+# ocm describe cluster <clusterID> command
+# ocm get /api/accounts_mgmt/v1/subscriptions --parameter search="(organization_id='1s2P4xxxxxxpMuiPHKQlNqBWQF5')" | jq '.items[].cluster_id'

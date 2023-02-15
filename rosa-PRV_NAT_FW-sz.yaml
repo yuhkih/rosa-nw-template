@@ -46,6 +46,9 @@
 #                   - "download.geonames.org"             # RHOAM Graphana ?
 #                   - ".ocp4.work"                        # RHOAM custom domain (Replace this with your own domain)
 # 2023/02/11 yuhkih add ExportVariablePrefix to avoid export variable conflicts
+# 2023/02/15 yuhkih added following firewall settings
+#                   - "pypi.org"                      # Django sample app for AWS ALB
+#                   - "files.pythonhosted.org"        # Django sample app for AWS ALB
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Single AZ network with FW"

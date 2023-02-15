@@ -46,6 +46,9 @@
 #                    - "download.geonames.org"             # RHOAM Graphana ?
 #                    - ".ocp4.work"                        # RHOAM custom domain (Replace this with your own domain)
 # 2023/02/15 yuhkih fix SPLUNK_NET => SPLUNK_SERVERS
+# 2023/02/15 yuhkih added following firewall settings
+#                   - "pypi.org"                      # Django sample app for AWS ALB
+#                   - "files.pythonhosted.org"        # Django sample app for AWS ALB
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Multi AZ network with FW"
@@ -750,6 +753,8 @@ Resources:
               - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
               - ".openshiftapps.com"            # For public cluster installation. You can narrow down this domain after installation complete to like ".apps.<cluster name>.<random>.<random>.openshiftapps.com"
               - "catalog.redhat.com"            # This was logged (ROSA ?)
+              - "pypi.org"                      # Django sample app for AWS ALB
+              - "files.pythonhosted.org"        # Django sample app for AWS ALB
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name

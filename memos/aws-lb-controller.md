@@ -199,15 +199,16 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 1. Create a new application in OpenShift
 
     ```bash
-    oc new-project demoapp
+    oc new-project demo
     oc new-app https://github.com/sclorg/django-ex.git
-    kubectl -n demoapp patch service django-ex -p '{"spec":{"type":"NodePort"}}'
+    kubectl -n demo patch service django-ex -p '{"spec":{"type":"NodePort"}}'
     ```
 
 1. Create an Ingress to trigger an ALB
 
     > Note: Setting the `alb.ingress.kubernetes.io/group.name` allows you to create multiple ALB Ingresses using the same ALB which can help reduce your AWS costs
     > Note: alb.ingress.kubernetes.io/scheme: internet-facing or internal
+    
     https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/ingress/annotations/
 
 
@@ -217,12 +218,12 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
     kind: Ingress
     metadata:
     name: django-ex
-    namespace: demoapp
+    namespace: demo
     annotations:
         kubernetes.io/ingress.class: alb
-        alb.ingress.kubernetes.io/scheme: internal
+        alb.ingress.kubernetes.io/scheme: internet-facing
         alb.ingress.kubernetes.io/target-type: instance
-        alb.ingress.kubernetes.io/group.name: "demoapp"
+        alb.ingress.kubernetes.io/group.name: "demo"
       labels:
         app: django-ex
     spec:
@@ -235,7 +236,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
             backend:
               service:
                 name: django-ex
-                port:
+                port:R
                   number: 8080
     EOF
     ```
@@ -250,7 +251,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 1. Save the ingress address
 
     ```bash
-    URL=$(kubectl -n demoapp get ingress django-ex \
+    URL=$(kubectl -n demo get ingress django-ex \
       -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
     ```
 
@@ -269,10 +270,10 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 
 ## Cleanup
 
-1. Delete the demoapp app
+1. Delete the demo app
 
     ```bash
-    kubectl delete ns demoapp
+    kubectl delete ns demo
     ```
 
 1. Uninstall the ALB Controller

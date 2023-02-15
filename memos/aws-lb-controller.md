@@ -199,9 +199,9 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 1. Create a new application in OpenShift
 
     ```bash
-    oc new-project demo
+    oc new-project demoapp
     oc new-app https://github.com/sclorg/django-ex.git
-    kubectl -n demo patch service django-ex -p '{"spec":{"type":"NodePort"}}'
+    kubectl -n demoapp patch service django-ex -p '{"spec":{"type":"NodePort"}}'
     ```
 
 1. Create an Ingress to trigger an ALB
@@ -217,12 +217,12 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
     kind: Ingress
     metadata:
     name: django-ex
-    namespace: demo
+    namespace: demoapp
     annotations:
         kubernetes.io/ingress.class: alb
         alb.ingress.kubernetes.io/scheme: internal
         alb.ingress.kubernetes.io/target-type: instance
-        alb.ingress.kubernetes.io/group.name: "demo"
+        alb.ingress.kubernetes.io/group.name: "demoapp"
       labels:
         app: django-ex
     spec:
@@ -250,7 +250,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 1. Save the ingress address
 
     ```bash
-    URL=$(kubectl -n demo get ingress django-ex \
+    URL=$(kubectl -n demoapp get ingress django-ex \
       -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
     ```
 
@@ -269,10 +269,10 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 
 ## Cleanup
 
-1. Delete the demo app
+1. Delete the demoapp app
 
     ```bash
-    kubectl delete ns demo
+    kubectl delete ns demoapp
     ```
 
 1. Uninstall the ALB Controller

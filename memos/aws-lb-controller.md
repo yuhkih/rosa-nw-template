@@ -224,7 +224,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
         alb.ingress.kubernetes.io/scheme: internet-facing
         alb.ingress.kubernetes.io/target-type: instance
         alb.ingress.kubernetes.io/group.name: "demo"
-      labels:
+    labels:
         app: django-ex
     spec:
         rules:
@@ -234,10 +234,10 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
             - pathType: Prefix
             path: /
             backend:
-              service:
+                service:
                 name: django-ex
-                port:R
-                  number: 8080
+                port:
+                    number: 8080
     EOF
     ```
 

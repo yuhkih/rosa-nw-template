@@ -35,6 +35,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
       | jq -r .spec.serviceAccountIssuer| sed -e "s/^https:\/\///")
     export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
     export REGION=$(rosa describe cluster -c $CLUSTER_NAME -o json | jq -r .region.id)
+    # export REGION=ap-northeast-1
     export NAMESPACE="alb-controller"
     export SA="alb-controller"
     rm -rf $SCRATCH_DIR
@@ -176,7 +177,7 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
     ```bash
     helm repo add eks https://aws.github.io/eks-charts
     helm repo update
-    helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+    helm upgrade alb-controller eks/aws-load-balancer-controller -i \
       -n $NAMESPACE \
       --set clusterName=$CLUSTER_NAME \
       --set serviceAccount.name=$SA \
@@ -198,9 +199,9 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 1. Create a new application in OpenShift
 
     ```bash
-    oc new-project demo
+    oc new-project demoapp
     oc new-app https://github.com/sclorg/django-ex.git
-    kubectl -n demo patch service django-ex -p '{"spec":{"type":"NodePort"}}'
+    kubectl -n demoapp patch service django-ex -p '{"spec":{"type":"NodePort"}}'
     ```
 
 1. Create an Ingress to trigger an ALB
@@ -215,27 +216,27 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
     apiVersion: networking.k8s.io/v1
     kind: Ingress
     metadata:
-      name: django-ex
-      namespace: demo
-      annotations:
+    name: django-ex
+    namespace: demoapp
+    annotations:
         kubernetes.io/ingress.class: alb
-        alb.ingress.kubernetes.io/scheme: internet-facing
+        alb.ingress.kubernetes.io/scheme: internal
         alb.ingress.kubernetes.io/target-type: instance
-        alb.ingress.kubernetes.io/group.name: "demo"
-    labels:
+        alb.ingress.kubernetes.io/group.name: "demoapp"
+      labels:
         app: django-ex
     spec:
         rules:
         - host: foo.bar
-            http:
+        http:
             paths:
             - pathType: Prefix
-                path: /
-                backend:
-                    service:
-                    name: django-ex
-                    port:
-                        number: 8080
+            path: /
+            backend:
+              service:
+                name: django-ex
+                port:
+                  number: 8080
     EOF
     ```
 
@@ -243,13 +244,13 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 
     ```bash
     kubectl -n $NAMESPACE logs -f \
-       deployment/aws-load-balancer-controller
+       deployment/alb-controller-aws-load-balancer-controller 
     ```
 
 1. Save the ingress address
 
     ```bash
-    URL=$(kubectl -n demo get ingress django-ex \
+    URL=$(kubectl -n demoapp get ingress django-ex \
       -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
     ```
 
@@ -268,16 +269,16 @@ https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
 
 ## Cleanup
 
-1. Delete the demo app
+1. Delete the demoapp app
 
     ```bash
-    kubectl delete ns demo
+    kubectl delete ns demoapp
     ```
 
 1. Uninstall the ALB Controller
 
     ```bash
-    helm delete -n $NAMESPACE aws-load-balancer-controller
+    helm delete -n $NAMESPACE alb-controller
     ```
 
 1. Get PolicyARN

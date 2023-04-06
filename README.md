@@ -275,16 +275,15 @@ STS を使用して構成した ROSA クラスター上に RHOAM add-on のイ�
     bastion-vpc-and-transit-gw-mz.yaml
     ```
 
-    この CloudFormation Template によって、Bastion 用の VPCとTransit Gateway が構成されます。
-    PrivateLink の場合は、ROSA のドメインは、ROSA の VPCからのみ解決できるようになっています。
+    この CloudFormation Template によって、 Bastion 用の VPCとTransit Gateway が構成されます。
 
-    Single AZ 構成の場合は以下の図のような環境が構築されます。
+    Single AZ 構成の場合は以下の図の左側の VPC と踏み台となる 2つの EC2、ROSA VPC と接続するための Transit Gatway が環境が構築されます。
 
     ![Single AZ Network + Bastion ](/images/bastion-vpc-transit-gateway.png) 
 
 1. ROSA の VPC の Route 53 の 設定を編集します。
 
-    この設定は、現在サポートされるかどうか不明なので、設定が取り消される可能性がある事に注意してください。
+    このままでは、踏み台用に作成した VPC から ROSA で使用されているプライベートなドメインを解決できないため、ROSA の プライベートドメインの Zone の設定を編集して、新しく作成した踏み台用の VPCを信頼するように設定します。
 
     Route53の画面で`プライベート`の Zone を探します。
     ![Route53 設定1](./images/route53-zone1.png "プライベートゾーン")

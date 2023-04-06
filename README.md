@@ -210,6 +210,16 @@ Multi AZ 環境の場合
     - ここでは GitHub 連携の詳細の手順は省略します。GitHub 連携の詳細については[こちらを](https://qiita.com/Yuhkih/items/367eccc0cfe64dfbd915#github-id-%E9%80%A3%E6%90%BA) 参照して下さい。
 
 
+# GitHub ユーザーの dedicated-admin グループへの追加
+
+console.redhat.com にアクセスしてインストールしたクラスターを選択します。
+
+Access control => Cluster Roles and Access で、github ユーザーを cluster-admins グループに追加しておきます。
+
+![Add github user to cluster-admin ](/images/rosa-user.png) 
+
+
+
 # RHOAM add-on の インストール
 
 RHOAM は add-on として提供されます。

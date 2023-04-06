@@ -84,14 +84,14 @@ PrivateLink の ROSA 環境を、前述の CloudFormation テンプレートで 
 Single AZ 環境の場合
 
 ```
-./memos/create-rosa-privatelink-cluster.sz.sh
+./memos/create-rosa-privatelink-cluster-sz.sh
 ```
 
 
 Multi AZ 環境の場合
 
 ```
-./memos/create-rosa-privatelink-cluster.mz.sh
+./memos/create-rosa-privatelink-cluster-mz.sh
 ```
 
 # PrivateLink を使用した RHOAM 用 ROSA Cluster のインストール

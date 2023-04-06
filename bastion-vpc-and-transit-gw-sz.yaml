@@ -9,6 +9,7 @@
 # 2023/01/15 yuhkih add chmod 444 /tmp/ec2-install.log
 # 2023/01/30 yuhkih add Helm installation to the bastion2
 # 2023/02/11 yuhkih add myex- for import variables.
+# 2023/03/23 yuhkih remove the above myex- changes
 #   ExportVariablePrefix to avoid export variable conflicts
 #   I am nos sure if this is work for this... -natgw-rtb-id1-rosa
 # !Ref はファイル内参照
@@ -60,12 +61,6 @@ Parameters:
     Description: Latest EC2 AMI from Systems Manager Parameter Store
     Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
     Default: "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
-
-  # Export Variable Prefix
-  ExportVariablePrefix:
-    Description: Prefix for Export variables
-    Type: String
-    Default: "myex"
 
   AvailabilityZone1Selection:
     Description: Availability Zone 1
@@ -212,7 +207,7 @@ Resources:
         - IpProtocol: icmp
           FromPort: -1
           ToPort: -1
-          CidrIp: { "Fn::ImportValue": "myex-vpc-cidr-rosa" }
+          CidrIp: { "Fn::ImportValue": "vpc-cidr-rosa" }
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-BastionInstance-Sg1
@@ -293,7 +288,7 @@ Resources:
           git version >> /tmp/ec2-install.log
           sudo yum install -y jq
           sudo echo "set -o vi" >> /home/ec2-user/.bash_profile
-          echo "install Let's Encrypt modules" >> /home/ec2-user/.bash_profile
+          echo "install Let's Encrypt modules"  >> /tmp/ec2-install.log
           sudo wget -r --no-parent -A 'epel-release-*.rpm' https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/
           sudo rpm -Uvh dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-*.rpm
           sudo amazon-linux-extras install epel -y
@@ -335,9 +330,9 @@ Resources:
     Type: AWS::EC2::TransitGatewayAttachment
     Properties:
       SubnetIds:
-        - { "Fn::ImportValue": "myex-private-subnet-id1-rosa" }
+        - { "Fn::ImportValue": "private-subnet-id1-rosa" }
       TransitGatewayId: !Ref TGW
-      VpcId: { "Fn::ImportValue": "myex-vpc-id-rosa" }
+      VpcId: { "Fn::ImportValue": "vpc-id-rosa" }
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-ROSA-attachment
@@ -347,7 +342,7 @@ Resources:
   #  Type: "AWS::EC2::Route"
   #  Properties:
   #    RouteTableId: !Ref PrivateRouteTable
-  #    DestinationCidrBlock: { "Fn::ImportValue": "myex-vpc-cidr-rosa" }
+  #    DestinationCidrBlock: { "Fn::ImportValue": "vpc-cidr-rosa" }
   #    TransitGatewayId: !Ref TGW
   #  DependsOn: VpcBastionAttachment
 
@@ -355,7 +350,7 @@ Resources:
   VpcRosaTGWRoutePrivate1:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "myex-private-rtb-id1-rosa" } # Route table ID for Private Subnet in ROSA VPC
+      RouteTableId: { "Fn::ImportValue": "private-rtb-id1-rosa" } # Route table ID for Private Subnet in ROSA VPC
       DestinationCidrBlock: !Ref VpcCIDR # If destination is Bastion VPC CIDR
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
@@ -363,7 +358,7 @@ Resources:
   VpcRosaTGWRouteFw1:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "myex-fw-rtb-id1-rosa" } # Route table ID for Public Subnet in ROSA VPC
+      RouteTableId: { "Fn::ImportValue": "fw-rtb-id1-rosa" } # Route table ID for Public Subnet in ROSA VPC
       DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
@@ -371,7 +366,7 @@ Resources:
   VpcRosaTGWRoutePublic1:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue" : "myex-natgw-rtb-id1-rosa" } # Route table ID for Public Subnet in ROSA VPC
+      RouteTableId: { "Fn::ImportValue" : "natgw-rtb-id1-rosa" } # Route table ID for Public Subnet in ROSA VPC
       DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
@@ -382,7 +377,7 @@ Resources:
     Type: "AWS::EC2::Route"
     Properties:
       RouteTableId: !Ref PrivateRouteTable
-      DestinationCidrBlock: { "Fn::ImportValue": "myex-vpc-cidr-rosa" }
+      DestinationCidrBlock: { "Fn::ImportValue": "vpc-cidr-rosa" }
       TransitGatewayId: !Ref TGW
     DependsOn: VpcBastionAttachment
 

@@ -49,6 +49,11 @@
 # 2023/02/15 yuhkih added following firewall settings
 #                   - "pypi.org"                      # Django sample app for AWS ALB
 #                   - "files.pythonhosted.org"        # Django sample app for AWS ALB
+# 2023/03/07 yuhih - Add "SubnetTagHeader" parameter for private subnets
+# 2023/04/03 yuhkih - Fix SMTP firewall source /destionation mistake.
+# 2023/04/04 yuhkih - reflect the latest official document
+# 2023/04/04 yuhkih - added -mz suffix to export variables. eg) private-subnet-id1-rosa => private-subnet-id1-rosa-mz
+#                     change default SubnetTagHeader to "mycluster-mz"
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Multi AZ network with FW"
@@ -68,6 +73,11 @@ Parameters:
     Description: An environment name that is prefixed to resource names  If you create multiple clusters using this template, you need to change this name to avoid name confliction.
     Type: String
     Default: "multiaz"
+
+  SubnetTagHeader:
+    Description: Tag header for subnets.
+    Type: String
+    Default: "mycluster-mz"
 
   VpcCIDR:
     Description: Please enter the IP range (CIDR notation) for this VPC
@@ -223,6 +233,8 @@ Resources:
           Value: !Sub ${EnvironmentName}-Private-Subnet1
         - Key: kubernetes.io/role/internal-elb
           Value: "true"
+        - Key: SubnetTag
+          Value: !Sub ${SubnetTagHeader}-Private-Subnet1
 
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
@@ -238,6 +250,8 @@ Resources:
           Value: !Sub ${EnvironmentName}-Private-Subnet2
         - Key: kubernetes.io/role/internal-elb
           Value: "true"
+        - Key: SubnetTag
+          Value: !Sub ${SubnetTagHeader}-Private-Subnet2
 
   PrivateSubnet3:
     Type: AWS::EC2::Subnet
@@ -253,6 +267,8 @@ Resources:
           Value: !Sub ${EnvironmentName}-Private-Subnet3
         - Key: kubernetes.io/role/internal-elb
           Value: "true"
+        - Key: SubnetTag
+          Value: !Sub ${SubnetTagHeader}-Private-Subnet3
 
   # Subnets for NAT GWs:
   NatgwSubnet1:
@@ -311,6 +327,8 @@ Resources:
           Value: "true"
         - Key: tag-value
           Value: "my-cluster-public"
+        - Key: SubnetTag
+          Value: !Sub ${SubnetTagHeader}-Public-Subnet1
 
   FirewallSubnet2:
     Type: AWS::EC2::Subnet
@@ -328,6 +346,8 @@ Resources:
           Value: "true"
         - Key: tag-value
           Value: "my-cluster-public"
+        - Key: SubnetTag
+          Value: !Sub ${SubnetTagHeader}-Public-Subnet2
 
   FirewallSubnet3:
     Type: AWS::EC2::Subnet
@@ -345,6 +365,8 @@ Resources:
           Value: "true"
         - Key: tag-value
           Value: "my-cluster-public"
+        - Key: SubnetTag
+          Value: !Sub ${SubnetTagHeader}-Public-Subnet3
 
   # AWS PrivateLink interface endpoint for services:
   VPCAEndpointSecurityGroup:
@@ -554,7 +576,7 @@ Resources:
                 - Keyword: "sid:1"
       Tags:
         - Key: Name
-          Value: IcmpAlert-RuleGroup
+          Value: !Sub ${EnvironmentName}-IcmpAlert-RuleGroup
 
   # AWS Network Firewall (2)
   # ROSA domain based FW prerequistes
@@ -578,6 +600,7 @@ Resources:
               - HTTP_HOST
               - TLS_SNI
             Targets:
+              # 1.Allowlist the following URLs that are used to install and download packages and tools:
               - "registry.redhat.io"
               - ".quay.io"
               - "sso.redhat.com"
@@ -587,16 +610,26 @@ Resources:
               - "openshift.org"
               - "registry.access.redhat.com"
               - "console.redhat.com"
+              # - "sso.redhat.com"  # duplicated in the document
               - "pull.q1w2.quay.rhcloud.com"
               - ".q1w2.quay.rhcloud.com"
+              - "www.okd.io" 
+              - "www.redhat.com"
+              - "aws.amazon.com"
+              - "catalog.redhat.com"
+              # 2. Allowlist the following telemetry URLs
               - "cert-api.access.redhat.com"
               - "api.access.redhat.com"
               - "infogw.api.openshift.com"
-              - "observatorium.api.openshift.comm"
-              - ".amazonaws.com"
+              # - "console.redhat.com"  # duplicated in the doc
+              - "observatorium.api.openshift.com"
+              # 3.Allowlist the following Amazon Web Services (AWS) API URls:
+              - ".amazonaws.com"  # this can be narrowed down.
+              # 4.Allowlist the following OpenShift URLs:
               - "mirror.openshift.com"
               - "storage.googleapis.com"
               - "api.openshift.com"
+              # 5.Allowlist the following site reliability engineering (SRE) and management URLs:
               - "api.pagerduty.com"
               - "events.pagerduty.com"
               - "api.deadmanssnitch.com"
@@ -604,14 +637,13 @@ Resources:
               - ".osdsecuritylogs.splunkcloud.com"
               - "http-inputs-osdsecuritylogs.splunkcloud.com"
               - "sftp.access.redhat.com"
-              - "observatorium-mst.api.openshift.com"
-              - "cloud.redhat.com"                   # For cluster upgrading (Not documented) 
-              - "aws.amazon.com"                     # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-              - "www.redhat.com"                     # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-              - "www.okd.io"                         # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-              - "access.redhat.com"                  # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-              - "observatorium.api.openshift.com"    # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
-  
+              # The following domain are logged too many times after installed rosa 
+              - "observatorium-mst.api.openshift.com" # [Not Documented as of March 2023] From access log. There a lot of logs... annoyoing. This is for Cluster Wide proxy. But logged if you don't configure the prox.
+              # The followong domain is needed to upgrade the clusterk
+              - "cloud.redhat.com"                   # [Not Documented as of March 2023] For cluster upgrading. You will see insight operator is degraded if you don't allow this domain. Jira was created for this. The doc will be updated.
+              # - "www.okd.io"                         # [Not Documented as of March 2023]  RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
+              - "access.redhat.com"                  # [Not Documented as of March 2023] 301 redirected from registry.access.redhat.com / registry.redhat.io. You get an email from SRE team if you don't allow this domain
+              # - "observatorium.api.openshift.com"    # RHOAM  =>  # ROSA installation (blocked logged but seems fine from co results and console)
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name
@@ -664,16 +696,16 @@ Resources:
           IPSets:
             RHOAM_SMTP_SERVERS:
               Definition:
-                - "13.114.210.107"
-                - "52.220.95.193"
+                - "13.114.210.107"  # Only APAC. smtp.sendgrid.net is resovled to this
+                - "52.220.95.193"   # Only APAC. smtp.sendgrid.net is resovled to this
         RulesSource:
           StatefulRules:
             - Action: PASS
               Header:
                 Direction: FORWARD
                 Protocol: SMTP
-                Destination: ANY
-                Source: $RHOAM_SMTP_SERVERS
+                Destination: $RHOAM_SMTP_SERVERS
+                Source: ANY
                 DestinationPort: 587
                 SourcePort: ANY
               RuleOptions:
@@ -702,17 +734,23 @@ Resources:
               - HTTP_HOST
               - TLS_SNI
             Targets:
-              - "registry-1.docker.io"              # RHOAM
+              # official
+              - "console.stage.redhat.com"          # RHOAM New
+              - "echo-api.3scale.net"               # echo-api.3scale.net is a sample backend for tutorial
               - "gcr.io"                            # RHOAM
-              - "smtp.sendgrid.net"                 # RHOAM
               - "grafana.com"                       # RHOAM
-              - "raw.githubusercontent.com"         # RHOAM
-              - "auth.docker.io"                    # RHOAM
-              - "production.cloudflare.docker.com"  # RHOAM
-              - "codeload.github.com"               # RHOAM
-              - "objects.githubusercontent.com"     # RHOAM
-              - "echo-api.3scale.net"               # RHOAM
-              - "download.geonames.org"             # RHOAM Graphana ?
+              - "stats.grafana.org"                 # RHAOM New
+              - ".sendgrid.net"                     # RHOAM New
+              # -----------------------------------------
+              # my experiments
+              # -----------------------------------------
+              # - "registry-1.docker.io"              # RHOAM (This is needed whhen you download a conatier from docker io)
+              # - "smtp.sendgrid.net"                 # RHOAM
+              - "raw.githubusercontent.com"         # RHOAM  This also can be seen when installing  OpenShift Pipeline Operator (seems not unique to RHOAM. But I can seed this for RHOMA)
+              # - "auth.docker.io"                    # RHOAM
+              # - "codeload.github.com"               # RHOAM
+              - "objects.githubusercontent.com"     # RHOAM Too many logs after the installation of RHOAM
+              # - "download.geonames.org"             # RHOAM Graphana ?
               - ".ocp4.work"                        # RHOAM custom domain (Replace this with your own domain)
             GeneratedRulesType: "ALLOWLIST"
       Tags:
@@ -739,22 +777,29 @@ Resources:
               - HTTP_HOST
               - TLS_SNI
             Targets:
-              - ".github.io"
-              - "github.com"
-              - "api.github.com" # added for GitHub IdP (So, ROSA)
-              - "acme-v02.api.letsencrypt.org"  # to setup EC2 for Let's Encrypt
-              - "acme-staging-v02.api.letsencrypt.org" # to setup EC2 for Let's Encrypt
-              - "dl.fedoraproject.org"          # Added to setup EC2 for Let's Encrypt
-              - "mirrors.fedoraproject.org"     # Added to setup EC2 for Let's Encrypt
-              - "d2lzkl7pfhq30w.cloudfront.net" # Added to setup EC2 for Let's Encrypt
-              - "epel.mirror.angkasa.id"        # Added to setup EC2 for Let's Encrypt
-              - "ftp.riken.jp"                  # Added to setup EC2 for Let's Encrypt
-              - "ftp.iij.ad.jp"                 # Added to setup EC2 for Let's Encrypt
-              - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
-              - ".openshiftapps.com"            # For public cluster installation. You can narrow down this domain after installation complete to like ".apps.<cluster name>.<random>.<random>.openshiftapps.com"
-              - "catalog.redhat.com"            # This was logged (ROSA ?)
-              - "pypi.org"                      # Django sample app for AWS ALB
-              - "files.pythonhosted.org"        # Django sample app for AWS ALB
+                - "dummy.example.com" # empty list is not allowed. So, this is dummy
+                # The followings are for using containers hosted on docker.io registry
+                - "docker.io"                         # RHOAM? and General containers hosted on docker.io
+                - "registry-1.docker.io"              # RHOAM? and General containers hosted on docker.io
+                - "auth.docker.io"                    # RHOAM? and General containers hosted on docker.io
+                - "production.cloudflare.docker.com"  # RHOAM? and General containers hosted on docker.io
+                # The followings are needed for GitHub IdP integration
+                - "github.com"     # GitHub IdP integraion (1)
+                - "api.github.com" # GitHub IdP integraion (2)
+                # The followings are needed to get Let's Encrypt certifciate using cert-bot. Probably will be needed for renewal (not sure how to test this)
+                - "acme-v02.api.letsencrypt.org"  # to setup EC2 for Let's Encrypt
+                - "acme-staging-v02.api.letsencrypt.org" # to setup EC2 for Let's Encrypt
+              # The followings are for instally Let's Encrypt modules on EC2 bastion server.
+              # If everything is installed already, these would not be needed except for updating the mddules.
+              # - "dl.fedoraproject.org"          # Added to setup EC2 for Let's Encrypt
+              # - "mirrors.fedoraproject.org"     # Added to setup EC2 for Let's Encrypt
+              # - "d2lzkl7pfhq30w.cloudfront.net" # Added to setup EC2 for Let's Encrypt
+              # - "epel.mirror.angkasa.id"        # Added to setup EC2 for Let's Encrypt
+              # - "ftp.riken.jp"                  # Added to setup EC2 for Let's Encrypt
+              # - "ftp.iij.ad.jp"                 # Added to setup EC2 for Let's Encrypt
+              # - "supporters.eff.org"            # Added to setup EC2 for Let's Encrypt
+              # Uknown
+              # - ".openshiftapps.com"            # For public cluster installation. You can narrow down this domain after installation complete to like ".apps.<cluster name>.<random>.<random>.openshiftapps.com"
             GeneratedRulesType: "ALLOWLIST"
       Tags:
         - Key: Name
@@ -1095,12 +1140,12 @@ Outputs:
   RosaVpcCIDR:
     Value: !Ref VpcCIDR
     Export:
-      Name: vpc-cidr-rosa
+      Name: vpc-cidr-rosa-mz
 
   RosaVpcID:
     Value: !Ref VPCA
     Export:
-      Name: vpc-id-rosa
+      Name: vpc-id-rosa-mz
 
 
 
@@ -1108,93 +1153,92 @@ Outputs:
   RosaPrivateSubnetID1:
     Value: !Ref PrivateSubnet1
     Export:
-      Name: private-subnet-id1-rosa
+      Name: private-subnet-id1-rosa-mz
 
   RosaNatGwSubnetID1:
     Value: !Ref NatgwSubnet1
     Export:
-      Name: natgw-subnet-id1-rosa
+      Name: natgw-subnet-id1-rosa-mz
 
   RosaFwSubnetID1:
     Value: !Ref FirewallSubnet1
     Export:
-      Name: fw-subnet-id1-rosa
+      Name: fw-subnet-id1-rosa-mz
 
   RosaPrivateRouteTableID1:
     Value: !Ref PrivateRtb1
     Export:
-      Name: private-rtb-id1-rosa
+      Name: private-rtb-id1-rosa-mz
 
   RosaNatGwRouteTableID1:
     Value: !Ref NatgwRtb1
     Export:
-      Name: natgw-rtb-id1-rosa
+      Name: natgw-rtb-id1-rosa-mz
   
   RosaFwRouteTableID1:
     Value: !Ref FirewallRtb1
     Export:
-      Name: fw-rtb-id1-rosa
+      Name: fw-rtb-id1-rosa-mz
 
 # add new
   RosaPrivateSubnetID2:
     Value: !Ref PrivateSubnet2
     Export:
-      Name: private-subnet-id2-rosa
+      Name: private-subnet-id2-rosa-mz
 
   RosaNatGwSubnetID2:
     Value: !Ref NatgwSubnet2
     Export:
-      Name: natgw-subnet-id2-rosa
+      Name: natgw-subnet-id2-rosa-mz
   
   RosaFwSubnetID2:
     Value: !Ref FirewallSubnet2
     Export:
-      Name: fw-subnet-id2-rosa
+      Name: fw-subnet-id2-rosa-mz
 
   RosaPrivateRouteTableID2:
     Value: !Ref PrivateRtb2
     Export:
-      Name: private-rtb-id2-rosa
+      Name: private-rtb-id2-rosa-mz
 
   RosaNatGwRouteTableID2:
     Value: !Ref NatgwRtb2
     Export:
-      Name: natgw-rtb-id2-rosa
+      Name: natgw-rtb-id2-rosa-mz
 
   RosaFwRouteTableID2:
     Value: !Ref FirewallRtb2
     Export:
-      Name: fw-rtb-id2-rosa
+      Name: fw-rtb-id2-rosa-mz
 
 
 # add new
   RosaPrivateSubnetID3:
     Value: !Ref PrivateSubnet3
     Export:
-      Name: private-subnet-id3-rosa
+      Name: private-subnet-id3-rosa-mz
 
   RosaNatGwSubnetID3:
     Value: !Ref NatgwSubnet3
     Export:
-      Name: natgw-subnet-id3-rosa
+      Name: natgw-subnet-id3-rosa-mz
   
   RosaFwSubnetID3:
     Value: !Ref FirewallSubnet3
     Export:
-      Name: fw-subnet-id3-rosa
-
+      Name: fw-subnet-id3-rosa-mz
 
   RosaPrivateRouteTableID3:
     Value: !Ref PrivateRtb3
     Export:
-      Name: private-rtb-id3-rosa
+      Name: private-rtb-id3-rosa-mz
 
   RosaNatGwRouteTableID3:
     Value: !Ref NatgwRtb3
     Export:
-      Name: natgw-rtb-id3-rosa
+      Name: natgw-rtb-id3-rosa-mz
 
   RosaFwRouteTableID3:
     Value: !Ref FirewallRtb3
     Export:
-      Name: fw-rtb-id3-rosa
+      Name: fw-rtb-id3-rosa-mz

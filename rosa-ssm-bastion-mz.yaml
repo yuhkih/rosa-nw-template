@@ -44,7 +44,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Allow instances to get to SSM Systems Manager
-      VpcId: { "Fn::ImportValue": "vpc-id-rosa" } # ROSA VPC ID
+      VpcId: { "Fn::ImportValue": "vpc-id-rosa-mz" } # ROSA VPC ID
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 443
@@ -68,7 +68,7 @@ Resources:
       SubnetIds:
         - { "Fn::ImportValue": "private-subnet-id1-rosa-mz" }
       VpcEndpointType: Interface
-      VpcId: { "Fn::ImportValue": "vpc-id-rosa" } # ROSA VPC ID
+      VpcId: { "Fn::ImportValue": "vpc-id-rosa-mz" } # ROSA VPC ID
 
   VPCAEC2MessagesEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -80,7 +80,7 @@ Resources:
       SubnetIds:
         - { "Fn::ImportValue": "private-subnet-id1-rosa-mz" }
       VpcEndpointType: Interface
-      VpcId: { "Fn::ImportValue": "vpc-id-rosa" } # ROSA VPC ID
+      VpcId: { "Fn::ImportValue": "vpc-id-rosa-mz" } # ROSA VPC ID
 
   VPCASSMMessagesEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -92,7 +92,7 @@ Resources:
       SubnetIds:
         - { "Fn::ImportValue": "private-subnet-id1-rosa-mz" }
       VpcEndpointType: Interface
-      VpcId: { "Fn::ImportValue": "vpc-id-rosa" } # ROSA VPC ID
+      VpcId: { "Fn::ImportValue": "vpc-id-rosa-mz" } # ROSA VPC ID
 
   # SSM Role:
   SubnetRole:
@@ -126,10 +126,10 @@ Resources:
     Properties:
       GroupDescription: "ICMP acess from VPCA"
       GroupName: !Sub ${EnvironmentName}-TestInstance-Sg1
-      VpcId: { "Fn::ImportValue": "vpc-id-rosa" } # ROSA VPC ID
+      VpcId: { "Fn::ImportValue": "vpc-id-rosa-mz" } # ROSA VPC ID
       SecurityGroupIngress:
         - IpProtocol: icmp
-          CidrIp: { "Fn::ImportValue": "vpc-cidr-rosa" } # ROSA VPC CIDR
+          CidrIp: { "Fn::ImportValue": "vpc-cidr-rosa-mz" } # ROSA VPC CIDR
           FromPort: -1
           ToPort: -1
       Tags:

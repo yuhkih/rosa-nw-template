@@ -324,7 +324,7 @@ SSHの鍵は CloudFormation で Bastionがデプロイされた時に AWS 上に
     ![Terminal1 ](/images/terminal1.png) 
 
     ログアウトせずに、接続を保ったままにします。
-    
+
 1. Linux 端末2で以下のコマンドを実行します。
 
     Privateネットワークにある踏み台 EC2 サーバーにログインします。
@@ -334,7 +334,7 @@ SSHの鍵は CloudFormation で Bastionがデプロイされた時に AWS 上に
 
     ![Terminal2 ](/images/terminal2.png) 
 
-    この端末から oc コマンドなどが実行できるはずです。
+    この端末から oc コマンドなどが実行できるはずです。`oc version` が実行できるか確認してみて下さい。
     - 踏み台サーバー作成時に oc コマンド等が自動でインストールされているはずですが、まれに失敗している場合があるので、その場合は手動でインストールして下さい。
 
     ROSA インストール時に出力された以下の useird / password でログインできるはずです。( URL / usser id / password は、もちろん install された ROSA 毎に違います。)

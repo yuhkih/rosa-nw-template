@@ -161,7 +161,12 @@ cd rosa-nw-template
     I: It may take up to a minute for the account to become active.
     ```
    
-    この時出てきた管理者用のログインコマンドは忘れずにメモしておきます。
+    この時出てきた管理者用のログインコマンドの以下の部分は、忘れずに txt ファイル等にメモしておきます。
+
+    ```
+    oc login https://api.mycluster.xb5p.p1.openshiftapps.com:6443 --username cluster-admin --password eKrGh-SfrLd-Evak9-abcde
+    ```
+
     ログインできるようになるまで、5分程度かかる事があります。
     
     `Login failed (401 Unauthorized)` が出てきても正常です。暫く待てばログインできるようになるはずです。
@@ -176,7 +181,10 @@ cd rosa-nw-template
     - ここでは GitHub 連携の詳細の手順は省略します。GitHub 連携の詳細については[こちらを](https://qiita.com/Yuhkih/items/367eccc0cfe64dfbd915#github-id-%E9%80%A3%E6%90%BA) 参照して下さい。
 
 
-# RHOAM のデプロイ
+# RHOAM add-on の インストール
+
+RHOAM は add-on として提供されます。
+STS を使用して構成した ROSA クラスター上に RHOAM add-on のインストールは、現状 CLI 環境でしか対応していませんのでご注意下さい。
 
 1. SRE が RHOAM を管理できるように SRE用の AWS Policy を作成します。
     ```
@@ -286,6 +294,17 @@ SSHの鍵は CloudFormation で Bastionがデプロイされた時に AWS 上に
     この端末から oc コマンドなどが実行できるはずです。
     - 踏み台サーバー作成時に oc コマンド等が自動でインストールされているはずですが、まれに失敗している場合があるので、その場合は手動でインストールして下さい。
 
+    ROSA インストール時に出力された以下の useird / password でログインできるはずです。( URL / usser id / password は、もちろん install された ROSA 毎に違います。)
+
+    ```
+    oc login https://api.mycluster.xb5p.p1.openshiftapps.com:6443 --username cluster-admin --password eKrGh-SfrLd-Evak9-abcde
+    ```
+
+    ブラウザーのアクセス URL は以下のコマンドで取得できます。
+
+    ```
+     oc whoami --show-console=true
+     ```
 
 ## ブラウザアクセスのセットアップ
 
@@ -297,21 +316,19 @@ SSHの鍵は CloudFormation で Bastionがデプロイされた時に AWS 上に
     ```
     dig +short console-openshift-console.apps.mycluster.xb5p.p1.openshiftapps.com 
     10.0.1.44
+    10.0.1.173
     ```
     
     このIPアドレスを覚えておきます。
 
 1. hosts ファイルを編集します。
 
-    `/etc/hosts` ファイル (Windows の場合は、`C:\Windows\System32\drivers\etc\hosts`) に以下のエントリーを作成します。
+    `/etc/hosts` ファイル (Windows の場合は、`C:\Windows\System32\drivers\etc\hosts`) に以下のエントリーを作成します。IPが複数ある場合は、どちらか一つを追加すれば大丈夫です。
 
-    | IP address  | ドメイン名                                   |　用途 |
-    | ------------| --------------------------------------------| ---- |
-    | 10.0.1.44  | console-openshift-console.apps.mycluster.xb5p.p1.openshiftapps.com | OpenShift console |
-    | 10.0.1.44  | oauth-openshift.apps.mycluster.xb5p.p1.openshiftapps.com | OAuth Server |
-    | 10.0.1.44  | 3scale-admin.apps.mycluster.xb5p.p1.openshiftapps.com | 3 Scale Console |
-    | 10.0.1.44  | keycloak-edge-redhat-rhoam-rhsso.apps.mycluster.xb5p.p1.openshiftapps.com | Keycloack Console | 
-    > - IP アドレスは全て同じでも大丈夫です。
+    | IP address  | ドメイン名                                   |　
+    | ------------| --------------------------------------------|
+    | 10.0.1.44  | .apps.mycluster.xb5p.p1.openshiftapps.com 　 |
+
     > - apps 以降のドメイン名はユーザー環境によって違います。
 
 1. ブラウザーに Socks サーバーを設定します。

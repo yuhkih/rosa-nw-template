@@ -74,6 +74,26 @@ cd rosa-nw-template
     ![Single AZ Network](/images/single-az-network.png) 
 
 
+# PrivateLink を使用した RHOAM 用 ROSA Cluster のインストール (実験バージョン)
+
+このスクリプトは実験的なものなので通常は読み飛ばしてください。通常の構築になれた後、使用してみて下さい。
+
+PrivateLink の ROSA 環境を、前述の CloudFormation テンプレートで Deploy 済みの Network 環境に構築するスクリプトです。AWS の subnet ID の取得などの面倒な作業を自動化しています。
+前述の CloudFormation で作成したタグを使用しているため、手動でデプロイした Netowork 環境では使用できません。
+
+Single AZ 環境の場合
+
+```
+./memos/create-rosa-privatelink-cluster.sz.sh
+```
+
+
+Multi AZ 環境の場合
+
+```
+./memos/create-rosa-privatelink-cluster.mz.sh
+```
+
 # PrivateLink を使用した RHOAM 用 ROSA Cluster のインストール
 
 1. CloudFormation の画面で、作成したスタックを選択し「出力」のタブに行くと以下のように Private Subnet の ID が表示されているはずです。PrivateLink を使ったインストールには、インストール時にこの IDの値を聞かれるのでメモしておきます。(Single AZ の Network を CloudFormation でデプロイした場合は、PrivateSubnetID1 のみ存在します。)
@@ -85,16 +105,25 @@ cd rosa-nw-template
     ```
     
     もしくは、jq コマンドをインストールしている場合は、AWS CLI で以下のように取得できます。
+    
+    Multi AZ 環境の場合 ( Private Subnet は 3つあります)
 
     ```
     # PrivateSubnetID1
-    aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet1 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
+    aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep Private-Subnet1 | awk -F'[,]' '{print $2}' | sed 's/"//g'
     # PrivateSubnetID2
-    aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet2 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
-    PrivateSubnetID3
-    aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet3 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
+    aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep Private-Subnet2 | awk -F'[,]' '{print $2}' | sed 's/"//g'
+    # PrivateSubnetID3
+    aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep Private-Subnet3 | awk -F'[,]' '{print $2}' | sed 's/"//g'
     ```
 
+    Single AZ 環境の場合  ( Private Subnet は 1つです)
+
+
+    ```
+    # export PrivateSubnetID1
+    aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep Private-Subnet1 | awk -F'[,]' '{print $2}' | sed 's/"//g'
+    ```
 
 1. ROSA の作成に必要な Role と Policy を作成します。
     ```
@@ -324,9 +353,10 @@ SSHの鍵は CloudFormation で Bastionがデプロイされた時に AWS 上に
 
     `/etc/hosts` ファイル (Windows の場合は、`C:\Windows\System32\drivers\etc\hosts`) に以下のエントリーを作成します。IPが複数ある場合は、どちらか一つを追加すれば大丈夫です。
 
-    | IP address  | ドメイン名                                   | 　
-    | ------------| --------------------------------------------| 
-    | 10.0.1.44   | .apps.mycluster.xb5p.p1.openshiftapps.com   | 
+ 
+    ```
+    10.0.1.44    .apps.mycluster.xb5p.p1.openshiftapps.com   
+    ```
 
     > - apps 以降のドメイン名はユーザー環境によって違います。
 

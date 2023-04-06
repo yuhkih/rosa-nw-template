@@ -9,6 +9,7 @@
 # 2023/01/15 yuhkih add Let's Encrypt module installation
 # 2023/01/30 yuhkih add Helm installation to the bastion
 # 2023/04/04 yuhkih add ImportValue to -mz.  eg  "private-subnet-id1-rosa" to  "private-subnet-id1-rosa-mz"
+# 2023/04/07 yuhkih fix bastion setup error (some log had been sent to .bash_profile mistakenly)
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Bastion VPC (prublic / private subnet ) which has a bation server in each subnet and Transit Gateway to a specifed VPC"
@@ -281,9 +282,8 @@ Resources:
           sudo yum install -y git
           git version >> /tmp/ec2-install.log
           sudo yum install -y jq
-          echo "set -o vi" >> /home/ec2-user/.bash_profile
           sudo echo "set -o vi" >> /home/ec2-user/.bash_profile
-          echo "install Let's Encrypt modules" >> /home/ec2-user/.bash_profile
+          echo "install Let's Encrypt modules"  >> /tmp/ec2-install.log
           sudo wget -r --no-parent -A 'epel-release-*.rpm' https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/
           sudo rpm -Uvh dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-*.rpm
           sudo amazon-linux-extras install epel -y

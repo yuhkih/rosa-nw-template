@@ -1,0 +1,60 @@
+apiVersion: cluster.open-cluster-management.io/v1alpha1
+kind: HypershiftDeployment
+metadata:
+  name: ocp-tenant-1
+  namespace: default
+spec:
+  hostingCluster: local-cluster
+  hostingNamespace: clusters
+  hostedClusterSpec:
+    networking:
+      machineCIDR: 10.0.0.0/16    # Default
+      networkType: OpenShiftSDN
+      podCIDR: 10.132.0.0/14      # Default
+      serviceCIDR: 172.31.0.0/16  # Default
+    platform:
+      type: AWS
+    pullSecret:
+      name: ocp-tenant-1-pull-secret    # This secret is created by the controller。
+    release:
+      image: quay.io/openshift-release-dev/ocp-release:4.10.15-x86_64  # Default
+    services:
+    - service: APIServer
+      servicePublishingStrategy:
+        type: LoadBalancer
+    - service: OAuthServer
+      servicePublishingStrategy:
+        type: Route
+    - service: Konnectivity
+      servicePublishingStrategy:
+        type: Route
+    - service: Ignition
+      servicePublishingStrategy:
+        type: Route
+    sshKey: {}
+  nodePools:
+  - name: ocp-tenant-1
+    spec:
+      clusterName: ocp-tenant-1
+      management:
+        autoRepair: false
+        replace:
+          rollingUpdate:
+            maxSurge: 1
+            maxUnavailable: 0
+          strategy: RollingUpdate
+        upgradeType: Replace
+      platform:
+        aws:
+          instanceType: m5.large
+        type: AWS
+      release:
+        image: quay.io/openshift-release-dev/ocp-release:4.10.15-x86_64 # Default
+      replicas: 2
+  infrastructure:
+    cloudProvider:
+      name: my-aws-credential  # AWS への credential の secret 
+    configure: True
+    platform:
+      aws:
+        region: ap-northeast-3  # Cluster を deploy する region

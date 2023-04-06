@@ -1,7 +1,10 @@
 #!/bin/sh
 # 2023/01/20 yuhkih initial make
 
-ClusterName=my-cluster
+# ClusterName=my-cluster
+# ClusterName=nonstspub
+ClusterName=rosa-cluster
+
 
 # need to get cluster id before deleting the cluster
 echo "[Log] get cluster id" 

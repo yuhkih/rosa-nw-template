@@ -36,6 +36,8 @@
 # 2023/02/01 yuhkih simple Single AZ BYOVPC network WITHOUT AWS NW Firewall (bastion VPC CF won't work with this)  / Not tested yet
 # 2023/02/11 yuhkih add ExportVariablePrefix to avoid export variable conflicts
 # 2023/02/14 yuhkih remove export varibales for bastion server in another VPC.
+# 2023/03/07 yuhkih - Add "SubnetTagHeader" parameter for private subnets
+#            yuhkih - sorted paramters
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Single AZ network with FW"
@@ -43,16 +45,31 @@ Description: "ROSA sample Single AZ network with FW"
 Metadata:
   "AWS::CloudFormation::Interface":
     ParameterGroups:
-      - Label:
+      - 
+        Label:
           default: "VPC Parameters"
         Parameters:
           - AvailabilityZone1Selection
+          - VpcCIDR
+          - Private1CIDR
+          - NAT1CIDR
+      - 
+        Label:
+          default: Label Paramaters
+        Parameters:
+          - EnvironmentName
+          - SubnetTagHeader
           
 Parameters:
   EnvironmentName:
     Description: An environment name that is prefixed to resource names. If you create multiple clusters using this template, you need to change this name to avoid name confliction.
     Type: String
     Default: "singleaz"
+
+  SubnetTagHeader:
+    Description: Tag header for subnets.
+    Type: String
+    Default: "mycluster"
 
   VpcCIDR:
     Description: Please enter the IP range (CIDR notation) for this VPC
@@ -70,12 +87,6 @@ Parameters:
     Description: Please enter the IP range (CIDR notation) for Public (NAT) Netwowrk1
     Type: String
     Default: "10.0.0.0/24"
-
-  # Export Variable Prefix
-  ExportVariablePrefix:
-    Description: Prefix for Export variables
-    Type: String
-    Default: "mypub"
 
   AvailabilityZone1Selection:
     Description: Availability Zone 1
@@ -137,6 +148,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-Private-Subnet1
+        - Key: SubnetTag
+          Value: !Sub ${SubnetTagHeader}-Private-Subnet1
 
   # Subnets for NAT GWs:
   NatgwSubnet1:
@@ -151,6 +164,9 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-Natgw-Subnet1
+        - Key: SubnetTag
+          Value: !Sub ${SubnetTagHeader}-Public-Subnet1
+
 
   # Private Route Tables:
   PrivateRtb1:
@@ -185,9 +201,6 @@ Resources:
           Value: !Sub ${EnvironmentName}-NatgwRouteTable1
 
   # Export Variable Prefix
-
-
-
     
   NatgwRtb1Association:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -205,3 +218,13 @@ Resources:
 Outputs:
   MyStacksRegion:
     Value: !Ref "AWS::Region"
+
+  RosaVpcCIDR:
+    Value: !Ref VpcCIDR
+    Export:
+      Name: vpc-cidr-rosa
+
+  RosaVpcID:
+    Value: !Ref VPCA
+    Export:
+      Name: vpc-id-rosa

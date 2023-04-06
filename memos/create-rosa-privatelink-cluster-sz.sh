@@ -10,6 +10,7 @@
 # 2023/01/20 yuhkih added confirmation (y/n)
 # 2023/01/28 yuhkih added time adjustment for WSL environment
 # 2023/02/06 yuhkih added GitHub integration confirmation
+# 2023/03/07 yuhkih added SubnetTagHeader="mycluster" 
 
 # ------------------------------------------------------
 # Adjust time for WSL 
@@ -19,18 +20,21 @@ sudo hwclock --hctosys
 # ------------------------------------------------------
 # Basic Information
 # ------------------------------------------------------
-ClusterName=my-cluster
+ClusterName=rosa-cluster
 RosaCIDR="10.0.0.0/16"
 NumberOfWorkers="4"
-RosaVersion="4.10.47"
-# RosaVersion="4.12"
+# RosaVersion="4.10.47"
+RosaVersion="4.12.9"
+SubnetTagHeader="mycluster" # not to conflict with other VPCs when there are multiple VPCs
+# RosaVersion="4.11.0"
 
 # ------------------------------------------------------
 # Get ROSA VPC subnetIds
 # ------------------------------------------------------
-export PrivateSubnetID1=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet1 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
-# export PrivateSubnetID2=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet2 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
-# export PrivateSubnetID3=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet3 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
+export PrivateSubnetID1=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep "$SubnetTagHeader"-Private-Subnet1 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
+# export PrivateSubnetID1=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep Private-Subnet1 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
+# export PrivateSubnetID2=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep "$SubnetTagHeader"-Private-Subnet2 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
+# export PrivateSubnetID3=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep "$SubnetTagHeader"-Private-Subnet3 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
 
 # ------------------------------------------------------
 # Create IAMRole and set them to variables 
@@ -66,6 +70,7 @@ echo "WORKER_ROLE = " $WORKER_ROLE
 echo "RosaCIDR = " $RosaCIDR
 echo "NumberOfWorkers = " $NumberOfWorkers
 echo "RosaVersion = " $RosaVersion
+echo "SubnetTagHeader= " $SubnetTagHeader
 echo "=============================================================="
 
 echo "[Log] Last confirmationk"
@@ -78,16 +83,16 @@ case "$yn" in [yY]*) ;; *) echo "abort." ; exit ;; esac
 echo "=============================================================="
 echo "[log] run rosa create cluster"
 rosa create cluster --cluster-name $ClusterName --sts \
-  --role-arn $INSTALL_ROLE \
-  --support-role-arn $SUPPORT_ROLE \
-  --controlplane-iam-role $CONTROL_PLANE_ROLE \
-  --worker-iam-role $WORKER_ROLE \
-  --region ap-northeast-1 --version $RosaVersion --compute-nodes $NumberOfWorkers --compute-machine-type m5.xlarge \
-  --machine-cidr $RosaCIDR --service-cidr 172.30.0.0/16 --pod-cidr 10.128.0.0/14  --host-prefix 23 \
-  --private-link \
-  --subnet-ids $PrivateSubnetID1 \
-  -y
-
+ --role-arn $INSTALL_ROLE \
+ --support-role-arn $SUPPORT_ROLE \
+ --controlplane-iam-role $CONTROL_PLANE_ROLE \
+ --worker-iam-role $WORKER_ROLE \
+ --region ap-northeast-1 --version $RosaVersion --compute-nodes $NumberOfWorkers --compute-machine-type m5.xlarge \
+ --machine-cidr $RosaCIDR --service-cidr 172.30.0.0/16 --pod-cidr 10.128.0.0/14  --host-prefix 23 \
+ --private-link \
+ --subnet-ids $PrivateSubnetID1 \
+ -y
+ 
 # ------------------------------------------------
 # After "rosa create cluster" 
 # create operator roles and OIDC Provider 

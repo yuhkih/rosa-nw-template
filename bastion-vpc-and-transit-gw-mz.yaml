@@ -8,6 +8,7 @@
 # 2023/01/15 yuhkih add chmod 444 /tmp/ec2-install.log
 # 2023/01/15 yuhkih add Let's Encrypt module installation
 # 2023/01/30 yuhkih add Helm installation to the bastion
+# 2023/04/04 yuhkih add ImportValue to -mz.  eg  "private-subnet-id1-rosa" to  "private-subnet-id1-rosa-mz"
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Bastion VPC (prublic / private subnet ) which has a bation server in each subnet and Transit Gateway to a specifed VPC"
@@ -200,7 +201,7 @@ Resources:
         - IpProtocol: icmp
           FromPort: -1
           ToPort: -1
-          CidrIp: { "Fn::ImportValue": "vpc-cidr-rosa" }
+          CidrIp: { "Fn::ImportValue": "vpc-cidr-rosa-mz" }
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-BastionInstance-Sg1
@@ -324,9 +325,9 @@ Resources:
     Type: AWS::EC2::TransitGatewayAttachment
     Properties:
       SubnetIds:
-        - { "Fn::ImportValue": "private-subnet-id1-rosa" }
+        - { "Fn::ImportValue": "private-subnet-id1-rosa-mz" }
       TransitGatewayId: !Ref TGW
-      VpcId: { "Fn::ImportValue": "vpc-id-rosa" }
+      VpcId: { "Fn::ImportValue": "vpc-id-rosa-mz" }
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-ROSA-attachment
@@ -336,7 +337,7 @@ Resources:
     Type: "AWS::EC2::Route"
     Properties:
       RouteTableId: !Ref PrivateRouteTable
-      DestinationCidrBlock: { "Fn::ImportValue": "vpc-cidr-rosa" }
+      DestinationCidrBlock: { "Fn::ImportValue": "vpc-cidr-rosa-mz" }
       TransitGatewayId: !Ref TGW
     DependsOn: VpcBastionAttachment
 
@@ -345,7 +346,7 @@ Resources:
   VpcRosaTGWRouteNatgw1:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "natgw-rtb-id1-rosa" } # Route table ID for Public Subnet in ROSA VPC
+      RouteTableId: { "Fn::ImportValue": "natgw-rtb-id1-rosa-mz" } # Route table ID for Public Subnet in ROSA VPC
       DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
@@ -353,7 +354,7 @@ Resources:
   VpcRosaTGWRouteFw1:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "fw-rtb-id1-rosa" } # Route table ID for Private Subnet in ROSA VPC
+      RouteTableId: { "Fn::ImportValue": "fw-rtb-id1-rosa-mz" } # Route table ID for Private Subnet in ROSA VPC
       DestinationCidrBlock: !Ref VpcCIDR # If destination is Bastion VPC CIDR
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
@@ -361,7 +362,7 @@ Resources:
   VpcRosaTGWRoutePrivate1:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "private-rtb-id1-rosa" } # Route table ID for Private Subnet in ROSA VPC
+      RouteTableId: { "Fn::ImportValue": "private-rtb-id1-rosa-mz" } # Route table ID for Private Subnet in ROSA VPC
       DestinationCidrBlock: !Ref VpcCIDR # If destination is Bastion VPC CIDR
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
@@ -371,7 +372,7 @@ Resources:
   VpcRosaTGWRouteNatgw2:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "natgw-rtb-id2-rosa" } # Route table ID for Public Subnet in ROSA VPC
+      RouteTableId: { "Fn::ImportValue": "natgw-rtb-id2-rosa-mz" } # Route table ID for Public Subnet in ROSA VPC
       DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
@@ -379,7 +380,7 @@ Resources:
   VpcRosaTGWRouteFw2:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "fw-rtb-id2-rosa" } # Route table ID for Public Subnet in ROSA VPC
+      RouteTableId: { "Fn::ImportValue": "fw-rtb-id2-rosa-mz" } # Route table ID for Public Subnet in ROSA VPC
       DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
@@ -387,7 +388,7 @@ Resources:
   VpcRosaTGWRoutePrivate2:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "private-rtb-id2-rosa" } # Route table ID for Private Subnet in ROSA VPC
+      RouteTableId: { "Fn::ImportValue": "private-rtb-id2-rosa-mz" } # Route table ID for Private Subnet in ROSA VPC
       DestinationCidrBlock: !Ref VpcCIDR # If destination is Bastion VPC CIDR
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
@@ -400,7 +401,7 @@ Resources:
   VpcRosaTGWRouteNatgw3:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "natgw-rtb-id3-rosa" } # Route table ID for Public Subnet in ROSA VPC
+      RouteTableId: { "Fn::ImportValue": "natgw-rtb-id3-rosa-mz" } # Route table ID for Public Subnet in ROSA VPC
       DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
@@ -408,7 +409,7 @@ Resources:
   VpcRosaTGWRouteFw3:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "fw-rtb-id3-rosa" } # Route table ID for Public Subnet in ROSA VPC
+      RouteTableId: { "Fn::ImportValue": "fw-rtb-id3-rosa-mz" } # Route table ID for Public Subnet in ROSA VPC
       DestinationCidrBlock: !Ref VpcCIDR # If destination is ROSA VPC CIDR
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment
@@ -416,7 +417,7 @@ Resources:
   VpcRosaTGWRoutePrivate3:
     Type: "AWS::EC2::Route"
     Properties:
-      RouteTableId: { "Fn::ImportValue": "private-rtb-id3-rosa" } # Route table ID for Private Subnet in ROSA VPC
+      RouteTableId: { "Fn::ImportValue": "private-rtb-id3-rosa-mz" } # Route table ID for Private Subnet in ROSA VPC
       DestinationCidrBlock: !Ref VpcCIDR # If destination is Bastion VPC CIDR
       TransitGatewayId: !Ref TGW # Then route to TGW
     DependsOn: VpcRosaAttachment

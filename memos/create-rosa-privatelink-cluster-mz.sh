@@ -10,20 +10,23 @@
 # 2023/01/20 yuhkih added confirmation (y/n)
 # 2023/01/27 yuhkih added --sts (sts is not default yet)
 # 2023/02/06 yuhkih added GitHub integration confirmation
+# 2023/03/07 yuhkih added SubnetTagHeader="mycluster" 
+# 2023/04/04 yuhkih change default SubnetTagHeader to "mycluster-mz"
 
 # ------------------------------------------------------
 # Basic Information
 # ------------------------------------------------------
-ClusterName=my-cluster
+ClusterName=rosa-cluster
 RosaCIDR="10.0.0.0/16"
 NumberOfWorkers="3"
+SubnetTagHeader="mycluster-mz"
 
 # ------------------------------------------------------
 # Get ROSA VPC subnetIds
 # ------------------------------------------------------
-export PrivateSubnetID1=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet1 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
-export PrivateSubnetID2=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet2 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
-export PrivateSubnetID3=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep PrivateSubnet3 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
+export PrivateSubnetID1=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep "$SubnetTagHeader"-Private-Subnet1 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
+export PrivateSubnetID2=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep "$SubnetTagHeader"-Private-Subnet2 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
+export PrivateSubnetID3=`aws ec2 describe-subnets | jq -r '.Subnets[] | [ .CidrBlock, .SubnetId, .AvailabilityZone, .Tags[].Value ] | @csv' | grep "$SubnetTagHeader"-Private-Subnet3 | awk -F'[,]' '{print $2}' | sed 's/"//g'`
 
 # ------------------------------------------------------
 # Create IAMRole and set them to variables 

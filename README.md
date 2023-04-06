@@ -324,9 +324,9 @@ SSHの鍵は CloudFormation で Bastionがデプロイされた時に AWS 上に
 
     `/etc/hosts` ファイル (Windows の場合は、`C:\Windows\System32\drivers\etc\hosts`) に以下のエントリーを作成します。IPが複数ある場合は、どちらか一つを追加すれば大丈夫です。
 
-    | IP address  | ドメイン名                                   |　
-    | ------------| --------------------------------------------|
-    | 10.0.1.44   | .apps.mycluster.xb5p.p1.openshiftapps.com   |
+    | IP address  | ドメイン名                                   | 　
+    | ------------| --------------------------------------------| 
+    | 10.0.1.44   | .apps.mycluster.xb5p.p1.openshiftapps.com   | 
 
     > - apps 以降のドメイン名はユーザー環境によって違います。
 

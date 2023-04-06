@@ -229,7 +229,6 @@ STS を使用して構成した ROSA クラスター上に RHOAM add-on のイ�
     - 現状、このコマンドは初回と2回目は失敗するようです。1分程度時間を置いて数回繰り返してみて下さい。
 
 
-
 # 踏み台用 VPC / Transit Gateway と踏み台のデプロイ
 
 
@@ -327,7 +326,7 @@ SSHの鍵は CloudFormation で Bastionがデプロイされた時に AWS 上に
 
     | IP address  | ドメイン名                                   |　
     | ------------| --------------------------------------------|
-    | 10.0.1.44  | .apps.mycluster.xb5p.p1.openshiftapps.com 　 |
+    | 10.0.1.44   | .apps.mycluster.xb5p.p1.openshiftapps.com   |
 
     > - apps 以降のドメイン名はユーザー環境によって違います。
 

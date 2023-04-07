@@ -81,6 +81,8 @@ cd rosa-nw-template
 PrivateLink の ROSA 環境を、前述の CloudFormation テンプレートで Deploy 済みの Network 環境に構築するスクリプトです。AWS の subnet ID の取得などの面倒な作業を自動化しています。
 前述の CloudFormation で作成したタグを使用しているため、手動でデプロイした Netowork 環境では使用できません。
 
+cluster名などは、shell 内で決め打ちで書き込んであるので、cluster名などを変更したい場合は shell を編集する事で可能です。
+
 Single AZ 環境の場合
 
 ```

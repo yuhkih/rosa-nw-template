@@ -53,6 +53,7 @@
 # 2023/03/07 yuhih - Remove ExportVariablePrefix
 # 2023/04/03 yuhkih - Fix SMTP firewall source /destionation mistake.
 # 2023/04/04 yuhkih - reflect the latest official document
+# 2023/04/07 yuhkih - added   DevSpaceDomainAllowStatefulRuleGroup
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Single AZ network with FW"
@@ -479,16 +480,16 @@ Resources:
               - "gcr.io"                            # RHOAM
               - "grafana.com"                       # RHOAM
               - "stats.grafana.org"                 # RHAOM New
-              - ".sendgrid.net"                     # RHOAM New
+              - ".sendgrid.net"                     # RHOAM New (Is thims for SMTP? comfirming...)
+              - "raw.githubusercontent.com"         # [ Not Documented as of now ] but it will be updated soon
+              - "objects.githubusercontent.com"     # [ Not Documented as of now ] but it will be updated soon
               # -----------------------------------------
               # my experiments
               # -----------------------------------------
               # - "registry-1.docker.io"              # RHOAM (This is needed whhen you download a conatier from docker io)
               # - "smtp.sendgrid.net"                 # RHOAM
-              - "raw.githubusercontent.com"         # RHOAM  This also can be seen when installing  OpenShift Pipeline Operator (seems not unique to RHOAM. But I can seed this for RHOMA)
               # - "auth.docker.io"                    # RHOAM
               # - "codeload.github.com"               # RHOAM
-              - "objects.githubusercontent.com"     # RHOAM Too many logs after the installation of RHOAM
               # - "download.geonames.org"             # RHOAM Graphana ?
               - ".ocp4.work"                        # RHOAM custom domain (Replace this with your own domain)
             GeneratedRulesType: "ALLOWLIST"
@@ -543,6 +544,38 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-DomainAllow-RuleGroup-For-Application
+  # AWS Network Firewall (7)
+  # DevSpace
+  DevSpaceDomainAllowStatefulRuleGroup:
+    Type: "AWS::NetworkFirewall::RuleGroup"
+    Properties:
+      RuleGroupName: !Sub ${EnvironmentName}-DevSpace-Domain-Allow-RuleGroup
+      Type: STATEFUL
+      Capacity: 100
+      RuleGroup:
+        RuleVariables:
+          IPSets:
+            HOME_NET:
+              Definition:
+                - !Ref VpcCIDR
+        RulesSource:
+          RulesSourceList:
+            TargetTypes:
+              - HTTP_HOST
+              - TLS_SNI
+            Targets:
+              # Not official based on Experiment / DevSpace plugin
+              - "openvsxorg.blob.core.windows.net"
+              - "go.microsoft.com"
+              - "login.live.com"
+              - "cdn.segment.com"
+              - "nav-edge.smartscreen.microsoft.com"
+              - "mirrors.fedoraproject.org"
+            GeneratedRulesType: "ALLOWLIST"
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-DevSpace-Domain-Allow-RuleGroup
+
 
   # VPCA Firewall Policy:
   EgressFirewallPolicy:
@@ -561,6 +594,7 @@ Resources:
           - ResourceArn: !Ref DomainAllowStatefulRuleGroupForApp
           - ResourceArn: !Ref RHOAMDomainAllowStatefulRuleGroup
           - ResourceArn: !Ref RHOAMIpAllowStatefulRuleGroup
+          - ResourceArn: !Ref DevSpaceDomainAllowStatefulRuleGroup
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-InspectionFirewall-Policy
@@ -575,6 +609,7 @@ Resources:
         RHOAMDomainAllowStatefulRuleGroup,
         RHOAMIpAllowStatefulRuleGroup,
         DomainAllowStatefulRuleGroupForApp,
+        DevSpaceDomainAllowStatefulRuleGroup,
       ]
     Type: AWS::NetworkFirewall::Firewall
     Properties:

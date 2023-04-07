@@ -53,7 +53,8 @@
 # 2023/04/03 yuhkih - Fix SMTP firewall source /destionation mistake.
 # 2023/04/04 yuhkih - reflect the latest official document
 # 2023/04/04 yuhkih - added -mz suffix to export variables. eg) private-subnet-id1-rosa => private-subnet-id1-rosa-mz
-#                     change default SubnetTagHeader to "mycluster-mz"
+#                     change default SubnetTagHeader to "mycluster-mz"]
+# 2023/04/07 yuhkih - added   DevSpaceDomainAllowStatefulRuleGroup
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Multi AZ network with FW"

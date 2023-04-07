@@ -214,13 +214,15 @@ Multi AZ 環境の場合
 
 # GitHub ユーザーの dedicated-admin グループへの追加
 
-console.redhat.com にアクセスしてインストールしたクラスターを選択します。
+https://console.redhat.com にアクセスしてインストールしたクラスターを選択します。
 
-Access control => Cluster Roles and Access で、github ユーザーを cluster-admins グループに追加しておきます。
+Access control => Cluster Roles and Access で、github ユーザーを dedicated-admins グループに追加しておきます。
+RHOAM の操作には、userid / password ではなく外部 Identity Provider 連携の User が必要になります。
 
-![Add github user to cluster-admin ](/images/rosa-user.png) 
+![Add github user to cluster-admin ](/images/rosa-user-dedicated.png) 
 
-
+この手順は後でも良いですが、RHOAM をインストール後に、この操作を行うと、直後はアクセス権が上手く反映されないように見えます。
+RHOAM のインストール後に、この権限の追加を行い、RHOAM のコンソールで "Access Denied" がでる場合は 5分程度待ってみてください。
 
 # RHOAM add-on の インストール
 

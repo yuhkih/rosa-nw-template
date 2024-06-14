@@ -69,13 +69,6 @@ cd rosa-nw-template
     ```
     を使用して、デプロイ完了まで待ちます。
 
-    これをデプロイする事で、Single AZ の場合は、以下のような環境が作成されます。
-
-    ![Single AZ Network](/images/single-az-network.png)
-
-    本来であれば、この VPC には、Private Subnet だけを置いて、Egress 用の VPC を分割したい所ですが、そうなると環境作成の時間もコストもかかるので、このようなネットワーク構成にしています。
-    ROSA の PrivateLink クラスターを Private Subnet に作成すれば、外部に公開される IPはないので、Egress トラフィックだけが Public Subnet を追加する事になります。
-
     CLI から Single AZ 用の環境を CloudFormation を使って実行する場合は以下のようになります。
 
     ```
@@ -83,6 +76,15 @@ cd rosa-nw-template
     ```
 
     とは言え、実行ログなどは、AWS Console 上から確認した方がわかりやすいかもしれません。
+
+    これをデプロイする事で、Single AZ の場合は、以下のような環境が作成されます。
+
+    ![Single AZ Network](/images/single-az-network.png)
+
+    本来であれば、この VPC には、Private Subnet だけを置いて、Egress 用の VPC を分割したい所ですが、そうなると環境作成の時間もコストもかかるので、このようなネットワーク構成にしています。
+    ROSA の PrivateLink クラスターを Private Subnet に作成すれば、外部に公開される IPはないので、Egress トラフィックだけが Public Subnet を追加する事になります。
+
+
 
 # PrivateLink を使用した RHOAM 用 ROSA Cluster のインストール (実験バージョン)
 

@@ -76,6 +76,13 @@ cd rosa-nw-template
     本来であれば、この VPC には、Private Subnet だけを置いて、Egress 用の VPC を分割したい所ですが、そうなると環境作成の時間もコストもかかるので、このようなネットワーク構成にしています。
     ROSA の PrivateLink クラスターを Private Subnet に作成すれば、外部に公開される IPはないので、Egress トラフィックだけが Public Subnet を追加する事になります。
 
+    CLI から Single AZ 用の環境を CloudFormation を使って実行する場合は以下のようになります。
+
+    ```
+    aws cloudformation deploy --template-file  rosa-PRV_NAT_FW-sz.yaml --stack-name myROSANetwork --capabilities CAPABILITY_NAMED_IAM
+    ```
+
+    とは言え、実行ログなどは、AWS Console 上から確認した方がわかりやすいかもしれません。
 
 # PrivateLink を使用した RHOAM 用 ROSA Cluster のインストール (実験バージョン)
 
@@ -99,13 +106,7 @@ Multi AZ 環境の場合
 ./memos/create-rosa-privatelink-cluster-mz.sh
 ```
 
-CLI から Single AZ 用の環境を CloudFormation を使って実行する場合は以下のようになります。
 
-```
- aws cloudformation deploy --template-file  rosa-PRV_NAT_FW-sz.yaml --stack-name myROSANetwork --capabilities CAPABILITY_NAMED_IAM
-```
-
-とは言え、実行ログなどは、AWS Console 上から確認した方がわかりやすいかもしれません。
 
 # PrivateLink を使用した RHOAM 用 ROSA Cluster のインストール
 

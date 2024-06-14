@@ -300,7 +300,13 @@ STS を使用して構成した ROSA クラスター上に RHOAM add-on のイ�
     bastion-vpc-and-transit-gw-mz.yaml
     ```
 
-    この CloudFormation Template によって、 Bastion 用の VPCとTransit Gateway が構成されます。
+   AWS CLI から Single AZ 用の bastion VPC を作成するために CloudFormation を実行する場合は以下のようになります。
+   
+   ```
+   aws cloudformation deploy --template-file bastion-vpc-and-transit-gw-sz.yaml --stack-name mybastion
+   ```
+
+   この CloudFormation Template によって、 Bastion 用の VPCとTransit Gateway が構成されます。
 
     Single AZ 構成の場合は以下の図の左側の VPC と踏み台となる 2つの EC2、ROSA VPC と接続するための Transit Gatway が環境が構築されます。
 

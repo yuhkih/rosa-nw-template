@@ -54,6 +54,7 @@
 # 2023/04/03 yuhkih - Fix SMTP firewall source /destionation mistake.
 # 2023/04/04 yuhkih - reflect the latest official document
 # 2023/04/07 yuhkih - added   DevSpaceDomainAllowStatefulRuleGroup
+# 2024/06/14 yuhkih - fix "error CloudFormation Stack creation failure due to DelayLambda "The runtime parameter of python3.7 is no longer supported...""
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "ROSA sample Single AZ network with FW"
@@ -281,7 +282,7 @@ Resources:
                   responseData['FwVpceId1'] = VpceId1
                   responseStatus = cfnresponse.SUCCESS
                   cfnresponse.send(event, context, responseStatus, responseData)
-      Runtime: python3.7
+      Runtime: python3.12
       Timeout: 30
 
   FirewallVpceIds:
